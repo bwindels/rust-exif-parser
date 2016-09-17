@@ -12,13 +12,25 @@ trait Number : Clone {
 }
 
 impl Number for u8 {
-	fn swap_bytes(self) -> u8 {
-		self.swap_bytes()
+	fn swap_bytes(self) -> Self {
+		self
 	}
 }
 
 impl Number for u16 {
-	fn swap_bytes(self) -> u16 {
+	fn swap_bytes(self) -> Self {
+		self.swap_bytes()
+	}
+}
+
+impl Number for u32 {
+	fn swap_bytes(self) -> Self {
+		self.swap_bytes()
+	}
+}
+
+impl Number for u64 {
+	fn swap_bytes(self) -> Self {
 		self.swap_bytes()
 	}
 }
@@ -125,6 +137,13 @@ mod tests {
 		assert_eq!(stream.read_num::<u16>(), Some(0xDEAD));
 		assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
 		assert_eq!(stream.read_num::<u16>(), None);
+	}
+
+	#[test]
+	fn test_read_u32() {
+		let mut stream = ::BufferStream::new(&DATA, ENDIANNESS);
+		assert_eq!(stream.read_num::<u32>(), Some(0xDEADCAFE));
+		assert_eq!(stream.read_num::<u32>(), None);
 	}
 
 }
