@@ -1,0 +1,6 @@
+[package]
+name = "exif-parser"
+version = "0.1.0"
+authors = ["bwindels <bruno.windels@gmail.com>"]
+
+[dependencies]
