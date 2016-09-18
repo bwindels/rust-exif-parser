@@ -10,6 +10,28 @@ impl<'a> JPEGSectionIterator<'a> {
     pub fn new(cursor: Cursor<'a>) -> JPEGSectionIterator<'a> {
         JPEGSectionIterator {cursor: cursor, had_error: false}
     }
+
+    fn foo(&mut self) -> Result<(u8, Cursor<'a>), &'static str> {
+        let header_byte : u8 = try!(self.cursor.read_num().ok_or("Could not read header"));
+
+        if header_byte != 0xFF {
+            self.had_error = true;
+            return Err("Invalid JPEG section offset");
+        }
+
+        let marker_type : u8 = try!(self.cursor.read_num().ok_or("Could not read header type"));
+        let section_has_data = (marker_type >= 0xD0 && marker_type <= 0xD9) ||
+            marker_type == 0xDA;
+
+        let len : u16 = if section_has_data {
+            try!(self.cursor.read_num::<u16>().ok_or("Could not read section data length")) - 2
+        } else {
+            0
+        };
+        let section_cursor = try!(self.cursor.branch(len as usize).ok_or("Fooo"));
+
+        Ok((marker_type, section_cursor))
+    }
 }
 
 impl<'a> Iterator for JPEGSectionIterator<'a> {
@@ -17,30 +39,13 @@ impl<'a> Iterator for JPEGSectionIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.had_error {
-            return None;
-        }
-
-        let header_byte : u8 = self.cursor.read_num();
-
-        if header_byte != 0xFF {
-            self.had_error = true;
-            return Some(Err("Invalid JPEG section offset"));
-        }
-        
-        let marker_type : u8 = self.cursor.read_num();
-        let section_has_data = (marker_type >= 0xD0 && marker_type <= 0xD9) || 
-                               marker_type == 0xDA;
-        
-        let len : u16 = if section_has_data {
-            self.cursor.read_num() - 2
+            None
         } else {
-            0
-        };
-        let section_cursor = self.cursor.branch(len);
-        
-        section_cursor.map(|c| Some((marker_type, c)))
+            Some(self.foo())
+        }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
