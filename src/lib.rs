@@ -265,7 +265,6 @@ mod tests {
     }
 
     #[test]
-<<<<<<< Updated upstream
     fn test_branch() {
         let mut stream = ::BufferStream::new(DATA, ::Endianness::Big);
         let mut branched_stream = stream.branch(2).unwrap();
@@ -280,18 +279,17 @@ mod tests {
 
     #[test]
     fn test_branch_length_check() {
-        let mut stream = ::BufferStream::new(DATA, ::Endianness::Big);
+        let stream = ::BufferStream::new(DATA, ::Endianness::Big);
 
         assert!(stream.branch(4).is_some());
         assert!(stream.branch(5).is_none());
     }
-=======
+
+    #[test]
     fn test_skip() {
         let mut stream = ::BufferStream::new(&DATA, ::Endianness::Big);
         stream = stream.skip(2).unwrap();
         assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
         assert_eq!(stream.read_num::<u16>(), None);
     }
-
->>>>>>> Stashed changes
 }
