@@ -109,6 +109,21 @@ impl<'a> BufferStream<'a> {
 	pub fn set_endianness(&mut self, end: Endianness) {
 		self.endianness = end;
 	}
+
+	pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
+		if self.len() >= length {
+			let end_index = self.offset + length;
+			let byte_slice = &self.data[self.offset .. end_index];
+			let str_slice = std::str::from_utf8(byte_slice).unwrap();
+
+			self.offset += length;
+
+			Some(str_slice)
+		}
+		else {
+			None
+		}
+	}
 }
 
 #[cfg(test)]
@@ -168,5 +183,15 @@ mod tests {
 		assert_eq!(stream.read_num::<u32>(), Some(0xFECAADDE));
 		assert_eq!(stream.read_num::<u32>(), None);
 	}
+
+	#[test]
+	fn test_read_str() {
+		let data = &[0x68, 0x65, 0x6C, 0x6C, 0x6F];
+		let mut stream = ::BufferStream::new(data, ::Endianness::Little);
+		assert_eq!(stream.read_str(5), Some("hello"));
+		assert_eq!(stream.read_str(1), None);
+	}
+
+	
 
 }
