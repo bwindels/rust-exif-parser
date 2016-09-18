@@ -114,16 +114,16 @@ impl<'a> BufferStream<'a> {
 #[cfg(test)]
 mod tests {
 	const DATA : &'static [u8] = &[0xDE, 0xAD, 0xCA, 0xFE];
-	const ENDIANNESS : ::Endianness = ::Endianness::Big;
+
 	#[test]
 	fn test_len() {
-		let stream = ::BufferStream::new(&DATA, ENDIANNESS);
+		let stream = ::BufferStream::new(&DATA, ::Endianness::Big);
 		assert_eq!(stream.len(), 4);
 	}
 
 	#[test]
 	fn test_read_u8() {
-		let mut stream = ::BufferStream::new(&DATA, ENDIANNESS);
+		let mut stream = ::BufferStream::new(&DATA, ::Endianness::Big);
 		assert_eq!(stream.read_num::<u8>(), Some(0xDE));
 		assert_eq!(stream.read_num::<u8>(), Some(0xAD));
 		assert_eq!(stream.read_num::<u8>(), Some(0xCA));
@@ -132,17 +132,40 @@ mod tests {
 	}
 
 	#[test]
-	fn test_read_u16() {
-		let mut stream = ::BufferStream::new(&DATA, ENDIANNESS);
-		assert_eq!(stream.read_num::<u16>(), Some(0xDEAD));
-		assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
+	fn test_read_u16_big_endian() {
+		let data = &[0xFD, 0xE8];
+		let mut stream = ::BufferStream::new(data, ::Endianness::Big);
+		assert_eq!(stream.read_num::<u16>(), Some(65000));
 		assert_eq!(stream.read_num::<u16>(), None);
 	}
 
 	#[test]
-	fn test_read_u32() {
-		let mut stream = ::BufferStream::new(&DATA, ENDIANNESS);
+	fn test_read_u16_little_endian() {
+		let data = &[0xE8, 0xFD];
+		let mut stream = ::BufferStream::new(data, ::Endianness::Little);
+		assert_eq!(stream.read_num::<u16>(), Some(65000));
+		assert_eq!(stream.read_num::<u16>(), None);
+	}
+
+	#[test]
+	fn test_read_u16_switch_endianness() {
+		let mut stream = ::BufferStream::new(&DATA, ::Endianness::Big);
+		assert_eq!(stream.read_num::<u16>(), Some(0xDEAD));
+		stream.set_endianness(::Endianness::Little);
+		assert_eq!(stream.read_num::<u16>(), Some(0xFECA));
+	}
+
+	#[test]
+	fn test_read_u32_big_endian() {
+		let mut stream = ::BufferStream::new(&DATA, ::Endianness::Big);
 		assert_eq!(stream.read_num::<u32>(), Some(0xDEADCAFE));
+		assert_eq!(stream.read_num::<u32>(), None);
+	}
+
+	#[test]
+	fn test_read_u32_little_endian() {
+		let mut stream = ::BufferStream::new(&DATA, ::Endianness::Little);
+		assert_eq!(stream.read_num::<u32>(), Some(0xFECAADDE));
 		assert_eq!(stream.read_num::<u32>(), None);
 	}
 
