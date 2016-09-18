@@ -1,7 +1,7 @@
 use std::mem;
 use std::ptr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Endianness {
     Little,
     Big,
@@ -146,6 +146,15 @@ impl<'a> BufferStream<'a> {
             None
         }
     }
+
+    pub fn branch(&self, length: usize) -> Option<BufferStream<'a>> {
+        if self.len() >= length {
+            let data_subset = &self.data[self.offset .. self.offset + length];
+            Some(BufferStream::new(data_subset, self.endianness))
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -244,5 +253,26 @@ mod tests {
         let mut stream = ::BufferStream::new(data, ::Endianness::Little);
         assert_eq!(stream.read_str(5), Some("hello"));
         assert_eq!(stream.read_str(1), None);
+    }
+
+    #[test]
+    fn test_branch() {
+        let mut stream = ::BufferStream::new(DATA, ::Endianness::Big);
+        let mut branched_stream = stream.branch(2).unwrap();
+        let result = Some(0xDEAD);
+
+        assert_eq!(stream.read_num::<u16>(), result);
+        assert_eq!(branched_stream.read_num::<u16>(), result);
+
+        assert!(stream.read_num::<u16>().is_some());
+        assert!(branched_stream.read_num::<u16>().is_none());
+    }
+
+    #[test]
+    fn test_branch_length_check() {
+        let mut stream = ::BufferStream::new(DATA, ::Endianness::Big);
+
+        assert!(stream.branch(4).is_some());
+        assert!(stream.branch(5).is_none());
     }
 }
