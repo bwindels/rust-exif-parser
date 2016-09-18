@@ -128,7 +128,7 @@ impl<'a> Iterator for JPEGSegmentIterator<'a> {
     }
 }
 
-pub fn read_image_size_from_sof<'a>(sof_cursor: &mut Cursor<'a>) -> Option<Size> {
+pub fn read_image_size_from_sof<'a>(sof_cursor: &Cursor<'a>) -> Option<Size> {
     let mut sof_cursor = require!(sof_cursor.skip(1), None);
     let height : u16 = require!(sof_cursor.read_num(), None);
     let width : u16 = require!(sof_cursor.read_num(), None);
