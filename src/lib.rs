@@ -20,7 +20,7 @@ impl Number for u8 {
 impl Number for f32 {
     fn swap_bytes(self) -> Self {
         let mut u : u32 = unsafe { mem::transmute(self) };
-        u.swap_bytes();
+        u = u.swap_bytes();
         let f : f32 = unsafe { mem::transmute(u) };
         f
     }
@@ -29,7 +29,7 @@ impl Number for f32 {
 impl Number for f64 {
     fn swap_bytes(self) -> Self {
         let mut u : u64 = unsafe { mem::transmute(self) };
-        u.swap_bytes();
+        u = u.swap_bytes();
         let f : f64 = unsafe { mem::transmute(u) };
         f
     }
@@ -200,6 +200,38 @@ mod tests {
         let mut stream = ::BufferStream::new(&DATA, ::Endianness::Little);
         assert_eq!(stream.read_num::<u32>(), Some(0xFECAADDE));
         assert_eq!(stream.read_num::<u32>(), None);
+    }
+
+    #[test]
+    fn test_read_f32_little_endian() {
+        let data = &[0xD8, 0xF, 0x49, 0x40];
+        let mut stream = ::BufferStream::new(data, ::Endianness::Little);
+        assert_eq!(stream.read_num::<f32>(), Some(3.141592));
+        assert_eq!(stream.read_num::<f32>(), None);
+    }
+
+    #[test]
+    fn test_read_f32_big_endian() {
+        let data = &[0x40, 0x49, 0xF, 0xD8];
+        let mut stream = ::BufferStream::new(data, ::Endianness::Big);
+        assert_eq!(stream.read_num::<f32>(), Some(3.141592));
+        assert_eq!(stream.read_num::<f32>(), None);
+    }
+
+    #[test]
+    fn test_read_f64_little_endian() {
+        let data = &[0xEA, 0x2E, 0x44, 0x54, 0xFB, 0x21, 0x9, 0x40];
+        let mut stream = ::BufferStream::new(data, ::Endianness::Little);
+        assert_eq!(stream.read_num::<f64>(), Some(3.14159265359));
+        assert_eq!(stream.read_num::<f64>(), None);
+    }
+
+    #[test]
+    fn test_read_f64_big_endian() {
+        let data = &[0x40, 0x9, 0x21, 0xFB, 0x54, 0x44, 0x2E, 0xEA];
+        let mut stream = ::BufferStream::new(data, ::Endianness::Big);
+        assert_eq!(stream.read_num::<f64>(), Some(3.14159265359));
+        assert_eq!(stream.read_num::<f64>(), None);
     }
 
     #[test]
