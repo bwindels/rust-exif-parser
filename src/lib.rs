@@ -54,21 +54,25 @@ impl ByteSwappable for u64 {
 }
 
 #[cfg(target_endian = "big")]
+#[inline(always)]
 fn to_le<T: ByteSwappable>(n: T) -> T {
     n.swap_bytes()
 }
 
 #[cfg(target_endian = "little")]
+#[inline(always)]
 fn to_le<T: ByteSwappable>(n: T) -> T {
     n
 }
 
 #[cfg(target_endian = "big")]
+#[inline(always)]
 fn to_be<T: ByteSwappable>(n: T) -> T {
     n
 }
 
 #[cfg(target_endian = "little")]
+#[inline(always)]
 fn to_be<T: ByteSwappable>(n: T) -> T {
     n.swap_bytes()
 }
