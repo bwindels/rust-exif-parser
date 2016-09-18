@@ -75,7 +75,7 @@ impl<'a> JPEGSegmentIterator<'a> {
         }
     }
 
-    fn advance(&mut self) -> Result<Option<(SegmentMarker, Cursor<'a>)>, &'static str> {
+    fn try_next(&mut self) -> Result<Option<(SegmentMarker, Cursor<'a>)>, &'static str> {
 
         if self.next_skip != 0 {
             self.cursor = require!(self.cursor.skip(self.next_skip as usize), Ok(None));
@@ -121,7 +121,7 @@ impl<'a> Iterator for JPEGSegmentIterator<'a> {
         if self.at_end {
             None
         } else {
-            match self.advance() {
+            match self.try_next() {
                 Ok(Some(data)) => Some(Ok(data)),
                 Ok(None) => None,
                 Err(msg) => Some(Err(msg))
