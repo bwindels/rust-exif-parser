@@ -7,17 +7,17 @@ enum Endianness {
     Big,
 }
 
-trait Number : Clone + PartialEq + PartialOrd {
+trait ByteSwappable : Clone + PartialEq + PartialOrd {
     fn swap_bytes(self) -> Self;
 }
 
-impl Number for u8 {
+impl ByteSwappable for u8 {
     fn swap_bytes(self) -> Self {
         self
     }
 }
 
-impl Number for f32 {
+impl ByteSwappable for f32 {
     fn swap_bytes(self) -> Self {
         let mut u : u32 = unsafe { mem::transmute(self) };
         u = u.swap_bytes();
@@ -26,7 +26,7 @@ impl Number for f32 {
     }
 }
 
-impl Number for f64 {
+impl ByteSwappable for f64 {
     fn swap_bytes(self) -> Self {
         let mut u : u64 = unsafe { mem::transmute(self) };
         u = u.swap_bytes();
@@ -35,41 +35,41 @@ impl Number for f64 {
     }
 }
 
-impl Number for u16 {
+impl ByteSwappable for u16 {
     fn swap_bytes(self) -> Self {
         self.swap_bytes()
     }
 }
 
-impl Number for u32 {
+impl ByteSwappable for u32 {
     fn swap_bytes(self) -> Self {
         self.swap_bytes()
     }
 }
 
-impl Number for u64 {
+impl ByteSwappable for u64 {
     fn swap_bytes(self) -> Self {
         self.swap_bytes()
     }
 }
 
 #[cfg(target_endian = "big")]
-fn to_le<T: Number>(n: T) -> T {
+fn to_le<T: ByteSwappable>(n: T) -> T {
     n.swap_bytes()
 }
 
 #[cfg(target_endian = "little")]
-fn to_le<T: Number>(n: T) -> T {
+fn to_le<T: ByteSwappable>(n: T) -> T {
     n
 }
 
 #[cfg(target_endian = "big")]
-fn to_be<T: Number>(n: T) -> T {
+fn to_be<T: ByteSwappable>(n: T) -> T {
     n
 }
 
 #[cfg(target_endian = "little")]
-fn to_be<T: Number>(n: T) -> T {
+fn to_be<T: ByteSwappable>(n: T) -> T {
     n.swap_bytes()
 }
 
@@ -93,7 +93,7 @@ impl<'a> BufferStream<'a> {
         self.data.len() - self.offset
     }
 
-    pub fn read_num<T: Number>(&mut self) -> Option<T> {
+    pub fn read_num<T: ByteSwappable>(&mut self) -> Option<T> {
 
         let size = mem::size_of::<T>();
 
