@@ -2,12 +2,12 @@ use std::mem;
 use std::ptr;
 
 #[derive(Debug, Clone, Copy)]
-enum Endianness {
+pub enum Endianness {
     Little,
     Big,
 }
 
-trait ByteSwappable : Clone + PartialEq + PartialOrd {
+pub trait ByteSwappable : Clone + PartialEq + PartialOrd {
     fn swap_bytes(self) -> Self;
 }
 
@@ -77,14 +77,13 @@ fn to_be<T: ByteSwappable>(n: T) -> T {
     n.swap_bytes()
 }
 
-struct BufferStream<'a> {
+pub struct BufferStream<'a> {
     data: &'a [u8],
     offset: usize,
     endianness: Endianness
 }
 
 impl<'a> BufferStream<'a> {
-
     pub fn new(data: &'a [u8], init_endian: Endianness) -> BufferStream<'a> {
         BufferStream {
             data: data,
@@ -98,7 +97,6 @@ impl<'a> BufferStream<'a> {
     }
 
     pub fn read_num<T: ByteSwappable>(&mut self) -> Option<T> {
-
         let size = mem::size_of::<T>();
 
         if self.len() >= size {
