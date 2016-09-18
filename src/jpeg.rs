@@ -10,7 +10,10 @@ macro_rules! require {
     ($opt:expr, $default:expr) => {
         match $opt {
             Some(val) => val,
-            None => return $default
+            None => {
+                println!("bailing at {:?}", line!());
+                return $default;
+            }
         }
     }
 }
@@ -37,6 +40,7 @@ impl<'a> JPEGSectionIterator<'a> {
         } else {
             0
         };
+        println!("hey man, {:?}", len);
         let section_cursor = require!(self.cursor.branch(len as usize), Ok(None));
 
         Ok(Some((marker_type, section_cursor)))
@@ -97,9 +101,15 @@ mod tests {
     }
 
     #[test]
-    fn test_app_section() {
+    fn test_app_sections_content() {
         let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
         let mut it = super::JPEGSectionIterator::new(cursor);
+
+        assert_eq!(it.count(), EXPECTED_SECTIONS.len());
+
+        let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
+        let mut it = super::JPEGSectionIterator::new(cursor);
+
         let mapped = it.map(|r| r.unwrap()).map(|(marker_type, cursor)| SectionResult {marker_type: marker_type, offset: 0, length: cursor.len()});
         let zipped = mapped.zip(EXPECTED_SECTIONS);
 
