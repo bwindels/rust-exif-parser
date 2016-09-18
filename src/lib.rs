@@ -7,13 +7,31 @@ enum Endianness {
     Big,
 }
 
-trait Number : Clone {
+trait Number : Clone + PartialEq + PartialOrd {
     fn swap_bytes(self) -> Self;
 }
 
 impl Number for u8 {
     fn swap_bytes(self) -> Self {
         self
+    }
+}
+
+impl Number for f32 {
+    fn swap_bytes(self) -> Self {
+        let mut u : u32 = unsafe { mem::transmute(self) };
+        u.swap_bytes();
+        let f : f32 = unsafe { mem::transmute(u) };
+        f
+    }
+}
+
+impl Number for f64 {
+    fn swap_bytes(self) -> Self {
+        let mut u : u64 = unsafe { mem::transmute(self) };
+        u.swap_bytes();
+        let f : f64 = unsafe { mem::transmute(u) };
+        f
     }
 }
 
