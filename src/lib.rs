@@ -155,6 +155,17 @@ impl<'a> BufferStream<'a> {
             None
         }
     }
+    
+    pub fn skip(&self, length: usize) -> Option<BufferStream<'a>> {
+    	if self.len() >= length {
+    		let new_offset = self.offset + length;
+    		let slice = &self.data[new_offset ..];
+    		Some(BufferStream::new(slice, self.endianness))
+    	}
+    	else {
+    		None
+    	}
+    }
 }
 
 #[cfg(test)]
@@ -256,6 +267,7 @@ mod tests {
     }
 
     #[test]
+<<<<<<< Updated upstream
     fn test_branch() {
         let mut stream = ::BufferStream::new(DATA, ::Endianness::Big);
         let mut branched_stream = stream.branch(2).unwrap();
@@ -275,4 +287,13 @@ mod tests {
         assert!(stream.branch(4).is_some());
         assert!(stream.branch(5).is_none());
     }
+=======
+    fn test_skip() {
+        let mut stream = ::BufferStream::new(&DATA, ::Endianness::Big);
+        stream = stream.skip(2).unwrap();
+        assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
+        assert_eq!(stream.read_num::<u16>(), None);
+    }
+
+>>>>>>> Stashed changes
 }
