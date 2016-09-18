@@ -134,10 +134,9 @@ impl<'a> Iterator for JPEGSegmentIterator<'a> {
 mod tests {
     use ::cursor::{Cursor, Endianness};
     use super::{JPEGSegmentIterator, SegmentMarker};
-    
+
     struct Segment {
         marker: SegmentMarker,
-        offset: usize,
         length: usize
     }
 
@@ -145,19 +144,19 @@ mod tests {
     
     fn expected_segments() -> [Segment; 13] {
         [
-            Segment {marker: SegmentMarker::from(216), offset: 2, length: 0},
-            Segment {marker: SegmentMarker::from(224), offset: 6, length: 14},
-            Segment {marker: SegmentMarker::from(226), offset: 24, length: 3158},
-            Segment {marker: SegmentMarker::from(225), offset: 3186, length: 200},
-            Segment {marker: SegmentMarker::from(225), offset: 3390, length: 374},
-            Segment {marker: SegmentMarker::from(219), offset: 3768, length: 65},
-            Segment {marker: SegmentMarker::from(219), offset: 3837, length: 65},
-            Segment {marker: SegmentMarker::from(192), offset: 3906, length: 15},
-            Segment {marker: SegmentMarker::from(196), offset: 3925, length: 29},
-            Segment {marker: SegmentMarker::from(196), offset: 3958, length: 179},
-            Segment {marker: SegmentMarker::from(196), offset: 4141, length: 29},
-            Segment {marker: SegmentMarker::from(196), offset: 4174, length: 179},
-            Segment {marker: SegmentMarker::from(218), offset: 4355, length: 0}
+            Segment {marker: SegmentMarker::from(216), length: 0},
+            Segment {marker: SegmentMarker::from(224), length: 14},
+            Segment {marker: SegmentMarker::from(226), length: 3158},
+            Segment {marker: SegmentMarker::from(225), length: 200},
+            Segment {marker: SegmentMarker::from(225), length: 374},
+            Segment {marker: SegmentMarker::from(219), length: 65},
+            Segment {marker: SegmentMarker::from(219), length: 65},
+            Segment {marker: SegmentMarker::from(192), length: 15},
+            Segment {marker: SegmentMarker::from(196), length: 29},
+            Segment {marker: SegmentMarker::from(196), length: 179},
+            Segment {marker: SegmentMarker::from(196), length: 29},
+            Segment {marker: SegmentMarker::from(196), length: 179},
+            Segment {marker: SegmentMarker::from(218), length: 0}
         ]
     }
 
@@ -173,7 +172,7 @@ mod tests {
     fn test_app_segments_content() {
         let expected = expected_segments();
         let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
-        let mut it = JPEGSegmentIterator::new(cursor);
+        let it = JPEGSegmentIterator::new(cursor);
 
         assert_eq!(
             it.take_while(Result::is_ok).count(),
@@ -188,7 +187,6 @@ mod tests {
             .map(|(marker, cursor)| {
                 Segment {
                     marker: marker,
-                    offset: 0,
                     length: cursor.len()
                 }
             });
