@@ -6,31 +6,40 @@ pub struct JPEGSectionIterator<'a> {
     had_error: bool
 }
 
+macro_rules! require {
+    ($opt:expr, $default:expr) => {
+        match $opt {
+            Some(val) => val,
+            None => return $default
+        }
+    }
+}
+
 impl<'a> JPEGSectionIterator<'a> {
     pub fn new(cursor: Cursor<'a>) -> JPEGSectionIterator<'a> {
         JPEGSectionIterator {cursor: cursor, had_error: false}
     }
 
-    fn foo(&mut self) -> Result<(u8, Cursor<'a>), &'static str> {
-        let header_byte : u8 = try!(self.cursor.read_num().ok_or("Could not read header"));
+    fn advance(&mut self) -> Result<Option<(u8, Cursor<'a>)>, &'static str> {
+        let header_byte : u8 = require!(self.cursor.read_num(), Ok(None));
 
         if header_byte != 0xFF {
             self.had_error = true;
             return Err("Invalid JPEG section offset");
         }
 
-        let marker_type : u8 = try!(self.cursor.read_num().ok_or("Could not read header type"));
+        let marker_type : u8 = require!(self.cursor.read_num(), Ok(None));
         let section_has_data = (marker_type >= 0xD0 && marker_type <= 0xD9) ||
             marker_type == 0xDA;
 
         let len : u16 = if section_has_data {
-            try!(self.cursor.read_num::<u16>().ok_or("Could not read section data length")) - 2
+            require!(self.cursor.read_num::<u16>(), Ok(None)) - 2
         } else {
             0
         };
-        let section_cursor = try!(self.cursor.branch(len as usize).ok_or("Fooo"));
+        let section_cursor = require!(self.cursor.branch(len as usize), Ok(None));
 
-        Ok((marker_type, section_cursor))
+        Ok(Some((marker_type, section_cursor)))
     }
 }
 
@@ -41,7 +50,11 @@ impl<'a> Iterator for JPEGSectionIterator<'a> {
         if self.had_error {
             None
         } else {
-            Some(self.foo())
+            match self.advance() {
+                Ok(Some(data)) => Some(Ok(data)),
+                Ok(None) => None,
+                Err(msg) => Some(Err(msg))
+            }
         }
     }
 }
