@@ -1,5 +1,6 @@
 use std::iter::Iterator;
 use ::cursor::Cursor;
+use ::Size;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SegmentMarker {
@@ -127,10 +128,25 @@ impl<'a> Iterator for JPEGSegmentIterator<'a> {
     }
 }
 
+pub fn read_image_size_from_sof<'a>(sof_cursor: &mut Cursor<'a>) -> Option<Size> {
+    let mut sof_cursor = require!(sof_cursor.skip(1), None);
+    let height : u16 = require!(sof_cursor.read_num(), None);
+    let width : u16 = require!(sof_cursor.read_num(), None);
+
+    Some(Size { height: height, width: width })
+}
+
 #[cfg(test)]
 mod tests {
-    use ::cursor::{Cursor, Endianness};
-    use super::{JPEGSegmentIterator, SegmentMarker};
+    use ::cursor::{
+        Cursor,
+        Endianness
+    };
+    use super::{
+        JPEGSegmentIterator,
+        SegmentMarker,
+        read_image_size_from_sof
+    };
 
     struct Segment {
         marker: SegmentMarker,
@@ -193,5 +209,18 @@ mod tests {
             assert_eq!(given.marker, expected.marker);
             assert_eq!(given.length, expected.length);
         }
+    }
+
+    #[test]
+    fn test_size() {
+        let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
+        let it = JPEGSegmentIterator::new(cursor);
+        let mut sof0_cursor = it
+            .map(|res| res.unwrap())
+            .find(|&(marker, _)| marker == SegmentMarker::SOF(0))
+            .map(|(_, cursor)| cursor).unwrap();
+        let size = read_image_size_from_sof(&mut sof0_cursor).unwrap();
+        assert_eq!(size.width, 2);
+        assert_eq!(size.height, 1);
     }
 }
