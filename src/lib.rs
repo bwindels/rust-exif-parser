@@ -2,6 +2,7 @@
 mod require;
 mod cursor;
 mod jpeg;
+mod exif;
 #[cfg(test)]
 mod test_fixtures;
 
