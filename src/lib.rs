@@ -1,3 +1,5 @@
+#[macro_use]
+mod require;
 mod cursor;
 mod jpeg;
 #[cfg(test)]
