@@ -135,15 +135,14 @@ impl<'a> Cursor<'a> {
         if self.len() >= length {
             let end_index = self.offset + length;
             let byte_slice = &self.data[self.offset .. end_index];
-            let str_slice = str::from_utf8(byte_slice).unwrap();
+            let str_slice = str::from_utf8(byte_slice);
 
-            self.offset += length;
-
-            Some(str_slice)
+            if str_slice.is_ok() {
+                self.offset += length;
+                return Some(str_slice.unwrap())
+            }
         }
-        else {
-            None
-        }
+        return None
     }
 
     pub fn branch(&self, length: usize) -> Option<Cursor<'a>> {
