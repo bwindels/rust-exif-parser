@@ -1,5 +1,7 @@
 mod cursor;
 mod jpeg;
+#[cfg(test)]
+mod test_fixtures;
 
 pub struct Size {
 	pub height: u16,
