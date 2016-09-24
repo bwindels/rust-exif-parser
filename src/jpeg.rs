@@ -166,6 +166,7 @@ mod tests {
         let mapped = it
             .map(|r| r.unwrap())
             .map(|(marker, cursor)| (marker, cursor.len()));
+        
         let zipped = mapped.zip(&expected);
 
         for (given, expected) in zipped {

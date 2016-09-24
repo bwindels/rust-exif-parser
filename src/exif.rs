@@ -9,7 +9,7 @@ fn has_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> bool {
 mod tests {
 
 	use ::cursor::{Cursor, Endianness};
-	use ::test_fixtures::{JPEG_SAMPLE};
+	use ::test_fixtures::{JPEG_SAMPLE, JPEG_SAMPLE_EXIF_OFFSET};
 	use super::{
 		has_exif_header
 	};
@@ -18,6 +18,9 @@ mod tests {
 	fn test_has_exif_header() {
 		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
 		assert!(!has_exif_header(&mut cursor));
+		let mut cursor = cursor.skip(JPEG_SAMPLE_EXIF_OFFSET).unwrap();
+		assert!(has_exif_header(&mut cursor));
+		
 	}
 
 
