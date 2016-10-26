@@ -1,8 +1,37 @@
-use ::cursor::Cursor;
+use ::cursor::{Cursor, Endianness};
 
-fn has_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> bool {
-	let header = require!(app1_cursor.read_str(6), false);
-	header == "Exif\0\0"
+fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> Result<Cursor<'a>, &'static str> {
+	let header = try!(app1_cursor.read_bytes(6)
+		.ok_or("Unexpected EOF 1"));
+
+	if header != b"Exif\0\0" {
+		return Err("Invalid exif header");
+	}
+
+	let mut tiff_marker = app1_cursor.branch(app1_cursor.len()).unwrap();
+	let tiff_header : u16 = try!(app1_cursor.read_num()
+		.ok_or("Unexpected EOF 2"));
+
+	if tiff_header == 0x4949 {
+		tiff_marker.set_endianness(Endianness::Little);
+		app1_cursor.set_endianness(Endianness::Little);
+	}
+	else if tiff_header == 0x4D4D {
+		tiff_marker.set_endianness(Endianness::Big);
+		app1_cursor.set_endianness(Endianness::Big);
+	}
+	else {
+		return Err("Invalid tiff header");
+	}
+
+	let tiff_data_marker : u16 = try!(app1_cursor.read_num()
+		.ok_or("Unexpected EOF 3"));
+
+	if tiff_data_marker != 0x002A {
+		return Err("Invalid tiff data");
+	}
+
+	return Ok(tiff_marker);
 }
 
 #[cfg(test)]
@@ -10,18 +39,14 @@ mod tests {
 
 	use ::cursor::{Cursor, Endianness};
 	use ::test_fixtures::{JPEG_SAMPLE, JPEG_SAMPLE_EXIF_OFFSET};
-	use super::{
-		has_exif_header
-	};
+	use super::read_exif_header;
 
 	#[test]
-	fn test_has_exif_header() {
+	fn test_read_exif_header() {
 		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
-		assert!(!has_exif_header(&mut cursor));
-		let mut cursor = cursor.skip(JPEG_SAMPLE_EXIF_OFFSET).unwrap();
-		assert!(has_exif_header(&mut cursor));
-		
+		assert!(read_exif_header(&mut cursor).is_err());
+		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
+		cursor = cursor.skip(JPEG_SAMPLE_EXIF_OFFSET).unwrap();
+		assert!(read_exif_header(&mut cursor).is_ok());
 	}
-
-
 }
