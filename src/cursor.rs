@@ -131,18 +131,33 @@ impl<'a> Cursor<'a> {
         self.endianness = end;
     }
 
-    pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
+    fn read_bytes_without_advancing(&mut self, length: usize) -> Option<&'a [u8]> {
         if self.len() >= length {
             let end_index = self.offset + length;
             let byte_slice = &self.data[self.offset .. end_index];
-            let str_slice = str::from_utf8(byte_slice);
-
-            if str_slice.is_ok() {
-                self.offset += length;
-                return Some(str_slice.unwrap())
-            }
+            return Some(byte_slice);
         }
         return None
+    }
+
+    pub fn read_bytes(&mut self, length: usize) -> Option<&'a [u8]> {
+    	return self.read_bytes_without_advancing(length).map(|b| {
+    	   self.offset = self.offset + length;
+    	   return b;
+    	});
+    }
+
+    pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
+        let bytes = self.read_bytes_without_advancing(length);
+        if let Some(slice) = bytes {
+		    let str_slice = str::from_utf8(slice).ok();
+		    if str_slice.is_some() {
+			    self.offset = self.offset + length;
+		    }
+		    return str_slice;
+        } else {
+        	return None;
+        }
     }
 
     pub fn branch(&self, length: usize) -> Option<Cursor<'a>> {
@@ -291,5 +306,14 @@ mod tests {
         stream = stream.skip(2).unwrap();
         assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
         assert_eq!(stream.read_num::<u16>(), None);
+    }
+
+    #[test]
+    fn test_read_bytes() {
+        let mut cursor = ::Cursor::new(b"\0\x10\x20\x30", ::Endianness::Big);
+        assert_eq!(cursor.read_bytes(2), Some(&b"\0\x10"[0 .. 2]));
+        assert_eq!(cursor.read_bytes(2), Some(&b"\x20\x30"[0 .. 2]));
+        assert_eq!(cursor.read_bytes(1), None);
+
     }
 }
