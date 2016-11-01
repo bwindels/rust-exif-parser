@@ -131,6 +131,10 @@ impl<'a> Cursor<'a> {
         self.endianness = end;
     }
 
+    pub fn endianness(&self) -> Endianness {
+      self.endianness
+    }
+
     fn read_bytes_without_advancing(&mut self, length: usize) -> Option<&'a [u8]> {
         if self.len() >= length {
             let end_index = self.offset + length;

@@ -13,11 +13,9 @@ fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> Result<Cursor<'a>, &'st
 		.ok_or("Unexpected EOF 2"));
 
 	if tiff_header == 0x4949 {
-		tiff_marker.set_endianness(Endianness::Little);
 		app1_cursor.set_endianness(Endianness::Little);
 	}
 	else if tiff_header == 0x4D4D {
-		tiff_marker.set_endianness(Endianness::Big);
 		app1_cursor.set_endianness(Endianness::Big);
 	}
 	else {
@@ -30,6 +28,8 @@ fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> Result<Cursor<'a>, &'st
 	if tiff_data_marker != 0x002A {
 		return Err("Invalid tiff data");
 	}
+
+	tiff_marker.set_endianness(app1_cursor.endianness());
 
 	return Ok(tiff_marker);
 }
