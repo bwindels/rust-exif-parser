@@ -3,6 +3,27 @@ use ::cursor::{Cursor, Endianness, ByteSwappable};
 use ::error::{ParseError, ParseResult};
 use std::marker::{Sized, PhantomData};
 
+pub enum ExifVariant<'a> {
+  Text(&'a str),
+  Bytes(&'a [u8]),
+  SignedByte(ValueIterator<'a, i8>),
+  UShort(ValueIterator<'a, u16>),
+  UInt(ValueIterator<'a, u32>),
+  UIntFraction(ValueIterator<'a, (u32, u32)>),
+  Short(ValueIterator<'a, i16>),
+  Int(ValueIterator<'a, i32>),
+  IntFraction(ValueIterator<'a, (i32, i32)>),
+  Float(ValueIterator<'a, f32>),
+  Double(ValueIterator<'a, f64>)
+}
+
+
+pub struct RawExifTag<'a> {
+  pub tag_type: u16,
+  pub format: ExifFormat,
+  pub value: ExifVariant<'a>
+}
+
 trait ExifValueReader {
   fn read_exif_value(cursor: &mut Cursor) -> ParseResult<Self> where Self: Sized + Copy;
 }
@@ -27,12 +48,6 @@ impl<T> ExifValueReader for T where T: ByteSwappable {
   fn read_exif_value(cursor: &mut Cursor) -> ParseResult<Self> {
     cursor.read_num_or_fail()
   }
-}
-
-pub struct RawExifTag<'a> {
-  pub tag_type: u16,
-  pub format: u16,
-  pub value: ExifVariant<'a>
 }
 
 pub struct ValueIterator<'a, T> {
@@ -127,22 +142,8 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
     format: format,
     value: variant
   };
-  Ok(tag)
-}
 
-pub enum ExifVariant<'a> {
-  Text(&'a str),
-  Bytes(&'a [u8]),
-  UByte(ValueIterator<'a, u8>),
-  UShort(ValueIterator<'a, u16>),
-  UInt(ValueIterator<'a, u32>),
-  UIntFraction(ValueIterator<'a, (u32, u32)>),
-  Byte(ValueIterator<'a, i8>),
-  Short(ValueIterator<'a, i16>),
-  Int(ValueIterator<'a, i32>),
-  IntFraction(ValueIterator<'a, (i32, i32)>),
-  Float(ValueIterator<'a, f32>),
-  Double(ValueIterator<'a, f64>)
+  Ok(tag)
 }
 
 pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>> {
