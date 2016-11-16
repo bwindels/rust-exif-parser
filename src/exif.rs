@@ -76,6 +76,60 @@ impl<'a, T: ExifValueReader + Copy + Sized> Iterator for ValueIterator<'a, T> {
   }
 }
 
+fn format_bytes_per_component(format: u16) -> ParseResult<usize> {
+  match format {
+    1 | 2 | 6 | 7 => Ok(1),
+    3 | 8 => Ok(2),
+    4 | 9 | 11 => Ok(4),
+    5 | 10 | 12 => Ok(8),
+    _ => Err(ParseError::InvalidValueFormat{ format: format })
+  }
+}
+
+pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> ParseResult<RawExifTag<'a>> {
+  let tag_type : u16 = try!(cursor.read_num_or_fail());
+  let format : u16 = try!(cursor.read_num_or_fail());
+  let components : u32 = try!(cursor.read_num_or_fail());
+  let bytes_per_component = try!(format_bytes_per_component(format));
+  let total_values_bytes = bytes_per_component * components as usize;
+
+  let mut value_cursor = if total_values_bytes > 4 {
+    let tiff_offset : u32 = try!(cursor.read_num_or_fail());
+    try!(tiff_cursor.branch_with_offset_or_fail(tiff_offset as usize))
+  } else {
+    try!(cursor.branch_with_offset_or_fail(0))
+  };
+
+  //move the cursor ref we got past this exif value
+  //so cursor is at the next value
+  if let Some(err) = cursor.skip_or_fail(4) {
+    return Err(err);
+  }
+
+  let len = components;
+  let variant = match format {
+    1 | 7 => ExifVariant::Bytes(try!(value_cursor.read_bytes_or_fail(len as usize))),
+    2 => ExifVariant::Text(try!(value_cursor.read_str_or_fail(len as usize))),
+    3 => ExifVariant::UShort(ValueIterator::<u16>::new(value_cursor, len)),
+    4 => ExifVariant::UInt(ValueIterator::<u32>::new(value_cursor, len)),
+    5 => ExifVariant::UIntFraction(ValueIterator::<(u32, u32)>::new(value_cursor, len)),
+    6 => ExifVariant::Byte(ValueIterator::<i8>::new(value_cursor, len)),
+    8 => ExifVariant::Short(ValueIterator::<i16>::new(value_cursor, len)),
+    9 => ExifVariant::Int(ValueIterator::<i32>::new(value_cursor, len)),
+    10 => ExifVariant::IntFraction(ValueIterator::<(i32, i32)>::new(value_cursor, len)),
+    11 => ExifVariant::Float(ValueIterator::<f32>::new(value_cursor, len)),
+    12 => ExifVariant::Double(ValueIterator::<f64>::new(value_cursor, len)),
+    _ => return Err(ParseError::InvalidValueFormat{ format: format } )
+  };
+
+  let tag = RawExifTag {
+    tag_type: tag_type,
+    format: format,
+    value: variant
+  };
+  Ok(tag)
+}
+
 pub enum ExifVariant<'a> {
   Text(&'a str),
   Bytes(&'a [u8]),
