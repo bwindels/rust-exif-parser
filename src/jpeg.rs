@@ -1,6 +1,7 @@
 use std::iter::Iterator;
 use ::cursor::Cursor;
 use ::Size;
+use ::error::{ParseError, ParseResult};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SegmentMarker {
@@ -65,21 +66,23 @@ impl<'a> JPEGSegmentIterator<'a> {
         }
     }
 
-    fn try_next(&mut self) -> Result<Option<(SegmentMarker, Cursor<'a>)>, &'static str> {
+    fn try_next(&mut self) -> Result<Option<(SegmentMarker, Cursor<'a>)>, ParseError> {
         if self.next_skip != 0 {
-            self.cursor = require!(self.cursor.skip(self.next_skip as usize), Ok(None));
+            if let Some(err) = self.cursor.skip_or_fail(self.next_skip as usize) {
+              return Err(err);
+            }
         }
 
-        let header_byte : u8 = require!(self.cursor.read_num(), Ok(None));
+        let header_byte : u8 = try!(self.cursor.read_num_or_fail());
 
         if header_byte != 0xFF {
             self.next_skip = 0;
             self.at_end = true;
-            return Err("Invalid JPEG segment offset");
+            return Err(ParseError::InvalidJPEGSegmentHeader {header: header_byte} );
         }
 
         let marker = SegmentMarker::from(
-            require!(self.cursor.read_num::<u8>(), Ok(None)));
+            try!(self.cursor.read_num_or_fail::<u8>()));
 
         //stop reading the stream at the SOS (Start of Stream) marker,
         //because its length is not stored in the header so we can't
@@ -89,12 +92,19 @@ impl<'a> JPEGSegmentIterator<'a> {
         }
         //don't read size from markers that have no datas
         let len : u16 = if marker.has_size() {
-            require!(self.cursor.read_num::<u16>(), Ok(None)) - 2
+            try!(self.cursor.read_num_or_fail::<u16>()) - 2
         } else {
             0
         };
 
-        let segment_cursor = require!(self.cursor.branch(len as usize), Ok(None));
+        let segment_cursor = self.cursor.branch(len as usize);
+        let segment_cursor = if let Some(c) = segment_cursor {
+          c
+        }
+        else {
+          return Ok(None);  //end iterator when we get at EOF
+        };
+
         self.next_skip = len;
 
         Ok(Some((marker, segment_cursor)))
@@ -102,7 +112,7 @@ impl<'a> JPEGSegmentIterator<'a> {
 }
 
 impl<'a> Iterator for JPEGSegmentIterator<'a> {
-    type Item = Result<(SegmentMarker, Cursor<'a>), &'static str>;
+    type Item = Result<(SegmentMarker, Cursor<'a>), ParseError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.at_end {
@@ -111,18 +121,20 @@ impl<'a> Iterator for JPEGSegmentIterator<'a> {
             match self.try_next() {
                 Ok(Some(data)) => Some(Ok(data)),
                 Ok(None) => None,
-                Err(msg) => Some(Err(msg))
+                Err(err) => Some(Err(err))
             }
         }
     }
 }
 
-pub fn read_image_size_from_sof<'a>(sof_cursor: &Cursor<'a>) -> Option<Size> {
-    let mut sof_cursor = require!(sof_cursor.skip(1), None);
-    let height : u16 = require!(sof_cursor.read_num(), None);
-    let width : u16 = require!(sof_cursor.read_num(), None);
+pub fn read_image_size_from_sof<'a>(sof_cursor: &mut Cursor<'a>) -> ParseResult<Size> {
+    if let Some(err) = sof_cursor.skip_or_fail(1) {
+      return Err(err);
+    }
+    let height : u16 = try!(sof_cursor.read_num_or_fail());
+    let width : u16 = try!(sof_cursor.read_num_or_fail());
 
-    Some(Size { height: height, width: width })
+    Ok(Size { height: height, width: width })
 }
 
 #[cfg(test)]
