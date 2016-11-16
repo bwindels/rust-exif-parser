@@ -29,6 +29,12 @@ impl<T> ExifValueReader for T where T: ByteSwappable {
   }
 }
 
+pub struct RawExifTag<'a> {
+  pub tag_type: u16,
+  pub format: u16,
+  pub value: ExifVariant<'a>
+}
+
 pub struct ValueIterator<'a, T> {
   value_cursor: Cursor<'a>,
   len: u32,
