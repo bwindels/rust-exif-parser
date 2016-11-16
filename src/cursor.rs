@@ -1,6 +1,7 @@
 use std::mem;
 use std::ptr;
 use std::str;
+use ::error::{ParseError, ParseResult};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Endianness {
@@ -127,6 +128,10 @@ impl<'a> Cursor<'a> {
         }
     }
 
+    pub fn read_num_or_fail<T: ByteSwappable>(&mut self) -> ParseResult<T> {
+      self.read_num().ok_or(ParseError::UnexpectedEOF)
+    }
+
     pub fn set_endianness(&mut self, end: Endianness) {
         self.endianness = end;
     }
@@ -151,6 +156,10 @@ impl<'a> Cursor<'a> {
     	});
     }
 
+    pub fn read_bytes_or_fail(&mut self, length: usize) -> ParseResult<&'a [u8]> {
+      self.read_bytes(length).ok_or(ParseError::UnexpectedEOF)
+    }
+
     pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
         let bytes = self.read_bytes_without_advancing(length);
         if let Some(slice) = bytes {
@@ -164,6 +173,10 @@ impl<'a> Cursor<'a> {
         }
     }
 
+    pub fn read_str_or_fail(&mut self, length: usize) -> ParseResult<&'a str> {
+      self.read_str(length).ok_or(ParseError::UnexpectedEOF)
+    }
+
     pub fn branch(&self, length: usize) -> Option<Cursor<'a>> {
         if self.len() >= length {
             let data_subset = &self.data[self.offset .. self.offset + length];
@@ -173,14 +186,41 @@ impl<'a> Cursor<'a> {
         }
     }
     
-    pub fn skip(&self, length: usize) -> Option<Cursor<'a>> {
-    	if self.len() >= length {
-    		let new_offset = self.offset + length;
+    pub fn branch_or_fail(&self, length: usize) -> ParseResult<Cursor<'a>> {
+      self.branch(length).ok_or(ParseError::UnexpectedEOF)
+    }
+
+    pub fn branch_with_offset(&self, offset: usize) -> Option<Cursor<'a>> {
+    	if self.len() >= offset {
+    		let new_offset = self.offset + offset;
     		let slice = &self.data[new_offset ..];
     		Some(Cursor::new(slice, self.endianness))
     	}
     	else {
     		None
+    	}
+    }
+
+    pub fn branch_with_offset_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
+      self.branch_with_offset(offset).ok_or(ParseError::UnexpectedEOF)
+    }
+
+    pub fn skip(&mut self, length: usize) -> bool {
+      if self.len() >= length {
+    		self.offset += length;
+    	  true
+    	}
+    	else {
+    		false
+    	}
+    }
+
+    pub fn skip_or_fail(&mut self, length: usize) -> Option<ParseError> {
+      if self.skip(length) {
+    		None
+    	}
+    	else {
+    		Some(ParseError::UnexpectedEOF)
     	}
     }
 }

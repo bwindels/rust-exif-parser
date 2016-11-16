@@ -1,16 +1,16 @@
 use ::cursor::{Cursor, Endianness};
 
-fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> Result<Cursor<'a>, &'static str> {
-	let header = try!(app1_cursor.read_bytes(6)
-		.ok_or("Unexpected EOF 1"));
+pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>> {
+	let header = try!(app1_cursor.read_bytes_or_fail(6));
 
 	if header != b"Exif\0\0" {
-		return Err("Invalid exif header");
+	  let h = header;
+	  let header_array = [h[0], h[1], h[2], h[3], h[4], h[5]];
+		return Err(ParseError::InvalidExifHeader{ header: header_array });
 	}
 
-	let mut tiff_marker = app1_cursor.branch(app1_cursor.len()).unwrap();
-	let tiff_header : u16 = try!(app1_cursor.read_num()
-		.ok_or("Unexpected EOF 2"));
+	let mut tiff_marker = try!(app1_cursor.branch_or_fail(app1_cursor.len()));
+	let tiff_header : u16 = try!(app1_cursor.read_num_or_fail());
 
 	if tiff_header == 0x4949 {
 		app1_cursor.set_endianness(Endianness::Little);
@@ -19,14 +19,13 @@ fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> Result<Cursor<'a>, &'st
 		app1_cursor.set_endianness(Endianness::Big);
 	}
 	else {
-		return Err("Invalid tiff header");
+		return Err(ParseError::InvalidTiffHeader{ header: tiff_header });
 	}
 
-	let tiff_data_marker : u16 = try!(app1_cursor.read_num()
-		.ok_or("Unexpected EOF 3"));
+	let tiff_data_marker : u16 = try!(app1_cursor.read_num_or_fail());
 
 	if tiff_data_marker != 0x002A {
-		return Err("Invalid tiff data");
+		return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });
 	}
 
 	tiff_marker.set_endianness(app1_cursor.endianness());

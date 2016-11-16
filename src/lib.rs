@@ -1,5 +1,3 @@
-#[macro_use]
-mod require;
 mod cursor;
 mod jpeg;
 mod exif;
@@ -13,4 +11,4 @@ pub struct Size {
 }
 
 pub use cursor::{Cursor, Endianness};
-pub use error::ParseError;
+pub use error::{ParseError, ParseResult};

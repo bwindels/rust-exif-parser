@@ -1,4 +1,11 @@
+#[derive(Debug)]
 pub enum ParseError {
-	UnexpectedEOF,
-	InvalidFormat
+  InvalidValueFormat{ format: u16 },
+  InvalidExifHeader{ header: [u8;6] },
+  InvalidTiffHeader{ header: u16 },
+  InvalidTiffData{ data: u16 },
+  UnexpectedEOF,
+  InvalidJPEGSegmentHeader{ header: u8 }
 }
+
+pub type ParseResult<T> = Result<T, ParseError>;
