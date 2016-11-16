@@ -19,6 +19,12 @@ impl ByteSwappable for u8 {
     }
 }
 
+impl ByteSwappable for i8 {
+    fn swap_bytes(self) -> Self {
+        self
+    }
+}
+
 impl ByteSwappable for f32 {
     fn swap_bytes(self) -> Self {
         let mut u : u32 = unsafe { mem::transmute(self) };
@@ -43,11 +49,24 @@ impl ByteSwappable for u16 {
     }
 }
 
+impl ByteSwappable for i16 {
+    fn swap_bytes(self) -> Self {
+        self.swap_bytes()
+    }
+}
+
 impl ByteSwappable for u32 {
     fn swap_bytes(self) -> Self {
         self.swap_bytes()
     }
 }
+
+impl ByteSwappable for i32 {
+    fn swap_bytes(self) -> Self {
+        self.swap_bytes()
+    }
+}
+
 
 impl ByteSwappable for u64 {
     fn swap_bytes(self) -> Self {
