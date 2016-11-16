@@ -1,4 +1,29 @@
-use ::cursor::{Cursor, Endianness};
+use std::iter::Iterator;
+use ::cursor::{Cursor, Endianness, ByteSwappable};
+use ::error::{ParseError, ParseResult};
+use std::marker::{Sized, PhantomData};
+
+pub struct ValueIterator<'a, T> {
+  value_cursor: Cursor<'a>,
+  len: u32,
+  i: u32,
+  phantom_data: PhantomData<T>
+}
+
+pub enum ExifVariant<'a> {
+  Text(&'a str),
+  Bytes(&'a [u8]),
+  UByte(ValueIterator<'a, u8>),
+  UShort(ValueIterator<'a, u16>),
+  UInt(ValueIterator<'a, u32>),
+  UIntFraction(ValueIterator<'a, (u32, u32)>),
+  Byte(ValueIterator<'a, i8>),
+  Short(ValueIterator<'a, i16>),
+  Int(ValueIterator<'a, i32>),
+  IntFraction(ValueIterator<'a, (i32, i32)>),
+  Float(ValueIterator<'a, f32>),
+  Double(ValueIterator<'a, f64>)
+}
 
 pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>> {
 	let header = try!(app1_cursor.read_bytes_or_fail(6));
