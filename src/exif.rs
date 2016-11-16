@@ -17,6 +17,91 @@ pub enum ExifVariant<'a> {
   Double(ValueIterator<'a, f64>)
 }
 
+#[derive(Copy, Clone)]
+pub enum ExifFormat {
+  UByte,
+  Text,
+  UShort,
+  UInt,
+  UIntFraction,
+  SignedByte,
+  Binary,
+  Short,
+  Int,
+  IntFraction,
+  Float,
+  Double
+}
+
+impl ExifFormat {
+  fn from(format: u16) -> ParseResult<ExifFormat> {
+    match format {
+      1 => Ok(ExifFormat::UByte),
+      2 => Ok(ExifFormat::Text),
+      3 => Ok(ExifFormat::UShort),
+      4 => Ok(ExifFormat::UInt),
+      5 => Ok(ExifFormat::UIntFraction),
+      6 => Ok(ExifFormat::SignedByte),
+      7 => Ok(ExifFormat::Binary),
+      8 => Ok(ExifFormat::Short),
+      9 => Ok(ExifFormat::Int),
+      10 => Ok(ExifFormat::IntFraction),
+      11 => Ok(ExifFormat::Float),
+      12 => Ok(ExifFormat::Double),
+      _ => Err(ParseError::InvalidValueFormat{ format: format } )
+    }
+  }
+
+  fn bytes_per_component(self) -> usize {
+    match self {
+      ExifFormat::UByte |
+      ExifFormat::Text |
+      ExifFormat::SignedByte |
+      ExifFormat::Binary => 1,
+
+      ExifFormat::UShort |
+      ExifFormat::Short => 2,
+
+      ExifFormat::UInt |
+      ExifFormat::Int |
+      ExifFormat::Float => 4,
+
+      ExifFormat::UIntFraction |
+      ExifFormat::IntFraction |
+      ExifFormat::Double => 8
+    }
+  }
+
+  fn variant_from_cursor<'a>(self, mut value_cursor: Cursor<'a>, len: u32)
+    -> ParseResult<ExifVariant<'a>>
+  {
+    let variant = match self {
+      ExifFormat::UByte | ExifFormat::Binary =>
+        ExifVariant::Bytes(try!(value_cursor.read_bytes_or_fail(len as usize))),
+      ExifFormat::Text =>
+        ExifVariant::Text(try!(value_cursor.read_str_or_fail(len as usize))),
+      ExifFormat::UShort =>
+        ExifVariant::UShort(ValueIterator::<u16>::new(value_cursor, len)),
+      ExifFormat::UInt =>
+        ExifVariant::UInt(ValueIterator::<u32>::new(value_cursor, len)),
+      ExifFormat::UIntFraction =>
+        ExifVariant::UIntFraction(ValueIterator::<(u32, u32)>::new(value_cursor, len)),
+      ExifFormat::SignedByte =>
+        ExifVariant::SignedByte(ValueIterator::<i8>::new(value_cursor, len)),
+      ExifFormat::Short =>
+        ExifVariant::Short(ValueIterator::<i16>::new(value_cursor, len)),
+      ExifFormat::Int =>
+        ExifVariant::Int(ValueIterator::<i32>::new(value_cursor, len)),
+      ExifFormat::IntFraction =>
+        ExifVariant::IntFraction(ValueIterator::<(i32, i32)>::new(value_cursor, len)),
+      ExifFormat::Float =>
+        ExifVariant::Float(ValueIterator::<f32>::new(value_cursor, len)),
+      ExifFormat::Double =>
+        ExifVariant::Double(ValueIterator::<f64>::new(value_cursor, len))
+    };
+    Ok(variant)
+  }
+}
 
 pub struct RawExifTag<'a> {
   pub tag_type: u16,
@@ -91,22 +176,12 @@ impl<'a, T: ExifValueReader + Copy + Sized> Iterator for ValueIterator<'a, T> {
   }
 }
 
-fn format_bytes_per_component(format: u16) -> ParseResult<usize> {
-  match format {
-    1 | 2 | 6 | 7 => Ok(1),
-    3 | 8 => Ok(2),
-    4 | 9 | 11 => Ok(4),
-    5 | 10 | 12 => Ok(8),
-    _ => Err(ParseError::InvalidValueFormat{ format: format })
-  }
-}
-
 pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> ParseResult<RawExifTag<'a>> {
   let tag_type : u16 = try!(cursor.read_num_or_fail());
-  let format : u16 = try!(cursor.read_num_or_fail());
+  let format_num : u16 = try!(cursor.read_num_or_fail());
   let components : u32 = try!(cursor.read_num_or_fail());
-  let bytes_per_component = try!(format_bytes_per_component(format));
-  let total_values_bytes = bytes_per_component * components as usize;
+  let format = try!(ExifFormat::from(format_num));
+  let total_values_bytes = format.bytes_per_component() * components as usize;
 
   let mut value_cursor = if total_values_bytes > 4 {
     let tiff_offset : u32 = try!(cursor.read_num_or_fail());
@@ -121,21 +196,8 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
     return Err(err);
   }
 
-  let len = components;
-  let variant = match format {
-    1 | 7 => ExifVariant::Bytes(try!(value_cursor.read_bytes_or_fail(len as usize))),
-    2 => ExifVariant::Text(try!(value_cursor.read_str_or_fail(len as usize))),
-    3 => ExifVariant::UShort(ValueIterator::<u16>::new(value_cursor, len)),
-    4 => ExifVariant::UInt(ValueIterator::<u32>::new(value_cursor, len)),
-    5 => ExifVariant::UIntFraction(ValueIterator::<(u32, u32)>::new(value_cursor, len)),
-    6 => ExifVariant::Byte(ValueIterator::<i8>::new(value_cursor, len)),
-    8 => ExifVariant::Short(ValueIterator::<i16>::new(value_cursor, len)),
-    9 => ExifVariant::Int(ValueIterator::<i32>::new(value_cursor, len)),
-    10 => ExifVariant::IntFraction(ValueIterator::<(i32, i32)>::new(value_cursor, len)),
-    11 => ExifVariant::Float(ValueIterator::<f32>::new(value_cursor, len)),
-    12 => ExifVariant::Double(ValueIterator::<f64>::new(value_cursor, len)),
-    _ => return Err(ParseError::InvalidValueFormat{ format: format } )
-  };
+  let variant = try!(format.variant_from_cursor(
+    value_cursor, components));
 
   let tag = RawExifTag {
     tag_type: tag_type,
