@@ -1,0 +1,5 @@
+ - [ ] Think about nicer API for skipping ahead in a cursor
+ - [ ] Write unit test for EXIF value parsing
+ - [ ] Write code to iterate over IFD sections
+ - [ ] Write unit tests for IFD sections
+ - [ ] Simplify EXIF values + tests
