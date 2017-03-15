@@ -1,5 +1,7 @@
- - [ ] Think about nicer API for skipping ahead in a cursor
+ - [ ] Make tests run again
+ - [ ] Think about nicer API for skipping ahead in a cursor/make cursor immutable
  - [ ] Write unit test for EXIF value parsing
  - [ ] Write code to iterate over IFD sections
  - [ ] Write unit tests for IFD sections
  - [ ] Simplify EXIF values + tests
+ - [ ] See if we can use the byteorder crate instead off our own unsafe code
