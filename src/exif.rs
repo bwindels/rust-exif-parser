@@ -77,9 +77,9 @@ impl ExifFormat {
   {
     let variant = match self {
       ExifFormat::UByte | ExifFormat::Binary =>
-        ExifVariant::Bytes(try!(value_cursor.read_bytes_or_fail(len as usize))),
+        ExifVariant::Bytes(value_cursor.read_bytes_or_fail(len as usize)?),
       ExifFormat::Text =>
-        ExifVariant::Text(try!(value_cursor.read_str_or_fail(len as usize))),
+        ExifVariant::Text(value_cursor.read_str_or_fail(len as usize)?),
       ExifFormat::UShort =>
         ExifVariant::UShort(ValueIterator::<u16>::new(value_cursor, len)),
       ExifFormat::UInt =>
@@ -115,16 +115,16 @@ trait ExifValueReader {
 
 impl ExifValueReader for (u32, u32) {
   fn read_exif_value(cursor: &mut Cursor) -> ParseResult<Self> {
-    let a : u32 = try!(cursor.read_num_or_fail());
-    let b : u32 = try!(cursor.read_num_or_fail());
+    let a : u32 = cursor.read_num_or_fail()?;
+    let b : u32 = cursor.read_num_or_fail()?;
     Ok((a, b))
   }
 }
 
 impl ExifValueReader for (i32, i32) {
   fn read_exif_value(cursor: &mut Cursor) -> ParseResult<Self> {
-    let a : i32 = try!(cursor.read_num_or_fail());
-    let b : i32 = try!(cursor.read_num_or_fail());
+    let a : i32 = cursor.read_num_or_fail()?;
+    let b : i32 = cursor.read_num_or_fail()?;
     Ok((a, b))
   }
 }
@@ -177,17 +177,17 @@ impl<'a, T: ExifValueReader + Copy + Sized> Iterator for ValueIterator<'a, T> {
 }
 
 pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> ParseResult<RawExifTag<'a>> {
-  let tag_type : u16 = try!(cursor.read_num_or_fail());
-  let format_num : u16 = try!(cursor.read_num_or_fail());
-  let components : u32 = try!(cursor.read_num_or_fail());
-  let format = try!(ExifFormat::from(format_num));
+  let tag_type : u16 = cursor.read_num_or_fail()?;
+  let format_num : u16 = cursor.read_num_or_fail()?;
+  let components : u32 = cursor.read_num_or_fail()?;
+  let format = ExifFormat::from(format_num)?;
   let total_values_bytes = format.bytes_per_component() * components as usize;
 
   let mut value_cursor = if total_values_bytes > 4 {
-    let tiff_offset : u32 = try!(cursor.read_num_or_fail());
-    try!(tiff_cursor.branch_with_offset_or_fail(tiff_offset as usize))
+    let tiff_offset : u32 = cursor.read_num_or_fail()?;
+    tiff_cursor.branch_with_offset_or_fail(tiff_offset as usize)?
   } else {
-    try!(cursor.branch_with_offset_or_fail(0))
+    cursor.branch_with_offset_or_fail(0)?
   };
 
   //move the cursor ref we got past this exif value
@@ -196,8 +196,8 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
     return Err(err);
   }
 
-  let variant = try!(format.variant_from_cursor(
-    value_cursor, components));
+  let variant = format.variant_from_cursor(
+    value_cursor, components)?;
 
   let tag = RawExifTag {
     tag_type: tag_type,
@@ -209,7 +209,7 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
 }
 
 pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>> {
-	let header = try!(app1_cursor.read_bytes_or_fail(6));
+	let header = app1_cursor.read_bytes_or_fail(6)?;
 
 	if header != b"Exif\0\0" {
 	  let h = header;
@@ -217,8 +217,8 @@ pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<
 		return Err(ParseError::InvalidExifHeader{ header: header_array });
 	}
 
-	let mut tiff_marker = try!(app1_cursor.branch_or_fail(app1_cursor.len()));
-	let tiff_header : u16 = try!(app1_cursor.read_num_or_fail());
+	let mut tiff_marker = app1_cursor.branch_or_fail(app1_cursor.len())?;
+	let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
 
 	if tiff_header == 0x4949 {
 		app1_cursor.set_endianness(Endianness::Little);
@@ -230,7 +230,7 @@ pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<
 		return Err(ParseError::InvalidTiffHeader{ header: tiff_header });
 	}
 
-	let tiff_data_marker : u16 = try!(app1_cursor.read_num_or_fail());
+	let tiff_data_marker : u16 = app1_cursor.read_num_or_fail()?;
 
 	if tiff_data_marker != 0x002A {
 		return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });

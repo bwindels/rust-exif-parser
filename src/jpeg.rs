@@ -73,7 +73,7 @@ impl<'a> JPEGSegmentIterator<'a> {
             }
         }
 
-        let header_byte : u8 = try!(self.cursor.read_num_or_fail());
+        let header_byte : u8 = self.cursor.read_num_or_fail()?;
 
         if header_byte != 0xFF {
             self.next_skip = 0;
@@ -82,7 +82,7 @@ impl<'a> JPEGSegmentIterator<'a> {
         }
 
         let marker = SegmentMarker::from(
-            try!(self.cursor.read_num_or_fail::<u8>()));
+            self.cursor.read_num_or_fail::<u8>()?);
 
         //stop reading the stream at the SOS (Start of Stream) marker,
         //because its length is not stored in the header so we can't
@@ -92,7 +92,7 @@ impl<'a> JPEGSegmentIterator<'a> {
         }
         //don't read size from markers that have no datas
         let len : u16 = if marker.has_size() {
-            try!(self.cursor.read_num_or_fail::<u16>()) - 2
+            self.cursor.read_num_or_fail::<u16>()? - 2
         } else {
             0
         };
@@ -131,8 +131,8 @@ pub fn read_image_size_from_sof<'a>(sof_cursor: &mut Cursor<'a>) -> ParseResult<
     if let Some(err) = sof_cursor.skip_or_fail(1) {
       return Err(err);
     }
-    let height : u16 = try!(sof_cursor.read_num_or_fail());
-    let width : u16 = try!(sof_cursor.read_num_or_fail());
+    let height : u16 = sof_cursor.read_num_or_fail()?;
+    let width : u16 = sof_cursor.read_num_or_fail()?;
 
     Ok(Size { height: height, width: width })
 }
