@@ -152,13 +152,14 @@ mod tests {
         JPEG_SAMPLE,
         expected_segments
     };
+    use ::error::ParseError;
 
     #[test]
     fn test_empty() {
         let data : [u8; 0] = [];
         let cursor = Cursor::new(&data, Endianness::Little);
         let mut it = JPEGSegmentIterator::new(cursor);
-        assert!(it.next().is_none());
+        assert!(it.next().unwrap().err().unwrap() == ParseError::UnexpectedEOF);
     }
 
     #[test]

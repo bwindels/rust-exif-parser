@@ -366,7 +366,7 @@ mod tests {
     #[test]
     fn test_skip() {
         let mut stream = ::Cursor::new(&DATA, ::Endianness::Big);
-        stream = stream.skip(2).unwrap();
+        stream = stream.branch_with_offset(2).unwrap();
         assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
         assert_eq!(stream.read_num::<u16>(), None);
     }

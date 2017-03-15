@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
   InvalidValueFormat{ format: u16 },
   InvalidExifHeader{ header: [u8;6] },

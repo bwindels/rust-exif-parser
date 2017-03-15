@@ -253,7 +253,7 @@ mod tests {
 		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
 		assert!(read_exif_header(&mut cursor).is_err());
 		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
-		cursor = cursor.skip(JPEG_SAMPLE_EXIF_OFFSET).unwrap();
+		cursor = cursor.branch_with_offset(JPEG_SAMPLE_EXIF_OFFSET).unwrap();
 		assert!(read_exif_header(&mut cursor).is_ok());
 	}
 }
