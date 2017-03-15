@@ -209,38 +209,17 @@ impl<'a> Cursor<'a> {
       self.branch(length).ok_or(ParseError::UnexpectedEOF)
     }
 
-    pub fn branch_with_offset(&self, offset: usize) -> Option<Cursor<'a>> {
-    	if self.len() >= offset {
-    		let new_offset = self.offset + offset;
-    		let slice = &self.data[new_offset ..];
-    		Some(Cursor::new(slice, self.endianness))
-    	}
-    	else {
-    		None
-    	}
+    pub fn skip(&self, offset: usize) -> Option<Cursor<'a>> {
+        if self.len() >= offset {
+            let data_subset = &self.data[self.offset + offset .. ];
+            Some(Cursor::new(data_subset, self.endianness))
+        } else {
+            None
+        }
     }
 
-    pub fn branch_with_offset_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
-      self.branch_with_offset(offset).ok_or(ParseError::UnexpectedEOF)
-    }
-
-    pub fn skip(&mut self, length: usize) -> bool {
-      if self.len() >= length {
-    		self.offset += length;
-    	  true
-    	}
-    	else {
-    		false
-    	}
-    }
-
-    pub fn skip_or_fail(&mut self, length: usize) -> Option<ParseError> {
-      if self.skip(length) {
-    		None
-    	}
-    	else {
-    		Some(ParseError::UnexpectedEOF)
-    	}
+    pub fn skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
+      self.skip(offset).ok_or(ParseError::UnexpectedEOF)
     }
 }
 
@@ -366,7 +345,7 @@ mod tests {
     #[test]
     fn test_skip() {
         let mut stream = ::Cursor::new(&DATA, ::Endianness::Big);
-        stream = stream.branch_with_offset(2).unwrap();
+        stream = stream.skip_or_fail(2).expect("EOF");
         assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
         assert_eq!(stream.read_num::<u16>(), None);
     }

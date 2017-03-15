@@ -68,9 +68,7 @@ impl<'a> JPEGSegmentIterator<'a> {
 
     fn try_next(&mut self) -> Result<Option<(SegmentMarker, Cursor<'a>)>, ParseError> {
         if self.next_skip != 0 {
-            if let Some(err) = self.cursor.skip_or_fail(self.next_skip as usize) {
-              return Err(err);
-            }
+            self.cursor = self.cursor.skip_or_fail(self.next_skip as usize)?;
         }
 
         let header_byte : u8 = self.cursor.read_num_or_fail()?;
@@ -128,9 +126,7 @@ impl<'a> Iterator for JPEGSegmentIterator<'a> {
 }
 
 pub fn read_image_size_from_sof<'a>(sof_cursor: &mut Cursor<'a>) -> ParseResult<Size> {
-    if let Some(err) = sof_cursor.skip_or_fail(1) {
-      return Err(err);
-    }
+    let mut sof_cursor = sof_cursor.skip_or_fail(1)?;
     let height : u16 = sof_cursor.read_num_or_fail()?;
     let width : u16 = sof_cursor.read_num_or_fail()?;
 
