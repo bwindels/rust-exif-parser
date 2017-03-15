@@ -1,4 +1,4 @@
- - [ ] Make tests run again
+ - [x] Make tests run again
  - [ ] Think about nicer API for skipping ahead in a cursor/make cursor immutable
  - [ ] Write unit test for EXIF value parsing
  - [ ] Write code to iterate over IFD sections
