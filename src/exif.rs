@@ -185,7 +185,6 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
 
   let value_cursor = if total_values_bytes > 4 {
     let tiff_offset : u32 = cursor.read_num_or_fail()?;
-    let mut value_cursor = tiff_cursor.clone();
     tiff_cursor.with_skip_or_fail(tiff_offset as usize)?
   } else {
     let c = cursor.clone();
