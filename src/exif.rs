@@ -167,6 +167,9 @@ impl<'a, T: ExifValueReader + Copy + Sized> Iterator for ValueIterator<'a, T> {
     self.i += 1;
 
     let value = T::read_exif_value(&mut self.value_cursor);
+    //unwrap should never panic since
+    //we check the length of the value_cursor
+    //in read_exif_tag
     return Some(value.unwrap());
   }
 
@@ -194,6 +197,14 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
     c
   };
 
+  //to reduce the complexity of reading a single tag,
+  //we fail early if we'll hit an EOF. It doesn't make
+  //sense to read half of an exif tag,
+  //and deal with errors in the ValueIterator
+  if value_cursor.len() < total_values_bytes {
+    return Err(ParseError::UnexpectedEOF { offset: value_cursor.offset() } );
+  }
+
   let variant = format.variant_from_cursor(
     value_cursor, components)?;
 
@@ -203,7 +214,7 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
     value: variant
   };
 
-  Ok(tag)
+  return Ok(tag);
 }
 
 pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>> {
