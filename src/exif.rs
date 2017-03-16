@@ -183,16 +183,17 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: &Cursor<'a>) -> P
   let format = ExifFormat::from(format_num)?;
   let total_values_bytes = format.bytes_per_component() * components as usize;
 
-  let mut value_cursor = if total_values_bytes > 4 {
+  let value_cursor = if total_values_bytes > 4 {
     let tiff_offset : u32 = cursor.read_num_or_fail()?;
-    tiff_cursor.skip_or_fail(tiff_offset as usize)?
+    let mut value_cursor = tiff_cursor.clone();
+    tiff_cursor.with_skip_or_fail(tiff_offset as usize)?
   } else {
-    cursor.skip_or_fail(0)?
+    let c = cursor.clone();
+    //move the cursor ref we got past this exif value
+    //so cursor is at the next value
+    *cursor = cursor.with_skip_or_fail(4)?;
+    c
   };
-
-  //move the cursor ref we got past this exif value
-  //so cursor is at the next value
-  //let cursor = cursor.skip_or_fail(4)?;
 
   let variant = format.variant_from_cursor(
     value_cursor, components)?;
@@ -251,7 +252,7 @@ mod tests {
 		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
 		assert!(read_exif_header(&mut cursor).is_err());
 		let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
-		cursor = cursor.skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
+		cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
 		assert!(read_exif_header(&mut cursor).is_ok());
 	}
 }

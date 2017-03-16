@@ -158,14 +158,14 @@ impl<'a> Cursor<'a> {
     }
 
     pub fn set_endianness(&mut self, end: Endianness) {
-        self.endianness = end;
+      self.endianness = end;
     }
 
     pub fn endianness(&self) -> Endianness {
       self.endianness
     }
 
-    fn read_bytes_without_advancing(&mut self, length: usize) -> Option<&'a [u8]> {
+    fn read_bytes_without_advancing(&self, length: usize) -> Option<&'a [u8]> {
         if self.len() >= length {
             let end_index = self.offset + length;
             let byte_slice = &self.data[self.offset .. end_index];
@@ -188,11 +188,11 @@ impl<'a> Cursor<'a> {
     pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
         let bytes = self.read_bytes_without_advancing(length);
         if let Some(slice) = bytes {
-		      let str_slice = str::from_utf8(slice).ok();
-		      if str_slice.is_some() {
-			      self.offset = self.offset + length;
-		      }
-		      return str_slice;
+		    let str_slice = str::from_utf8(slice).ok();
+		    if str_slice.is_some() {
+			    self.offset = self.offset + length;
+		    }
+		    return str_slice;
         } else {
         	return None;
         }
@@ -202,20 +202,17 @@ impl<'a> Cursor<'a> {
       self.read_str(length).ok_or(ParseError::UnexpectedEOF)
     }
 
-    pub fn skip(&self, offset: usize) -> Option<Cursor<'a>> {
-        if self.len() >= offset {
-            Some(Cursor {
-              data: self.data,
-              offset: self.offset + offset,
-              endianness: self.endianness
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
-      self.skip(offset).ok_or(ParseError::UnexpectedEOF)
+    pub fn with_skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
+      if self.len() >= offset {
+        Ok(Cursor {
+            data: self.data,
+            offset: self.offset + offset,
+            endianness: self.endianness
+        })
+      }
+      else {
+        Err(ParseError::UnexpectedEOF)
+      }
     }
 
     pub fn with_max_len(&self, max_len: usize) -> Cursor<'a> {
@@ -349,7 +346,7 @@ mod tests {
     #[test]
     fn test_skip() {
         let mut stream = ::Cursor::new(&DATA, ::Endianness::Big);
-        stream = stream.skip_or_fail(2).expect("EOF");
+        stream = stream.with_skip_or_fail(2).expect("EOF");
         assert_eq!(stream.read_num::<u16>(), Some(0xCAFE));
         assert_eq!(stream.read_num::<u16>(), None);
     }
