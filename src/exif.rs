@@ -17,7 +17,7 @@ pub enum ExifVariant<'a> {
   Double(ValueIterator<'a, f64>)
 }
 
-#[derive(Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum ExifFormat {
   UByte,
   Text,
@@ -244,7 +244,12 @@ mod tests {
 
 	use ::cursor::{Cursor, Endianness};
 	use ::test_fixtures::{JPEG_SAMPLE, JPEG_SAMPLE_EXIF_OFFSET};
-	use super::read_exif_header;
+	use super::{
+    read_exif_header,
+    read_exif_tag,
+    ExifFormat,
+    ExifVariant
+  };
 
 	#[test]
 	fn test_read_exif_header() {
@@ -254,4 +259,53 @@ mod tests {
 		cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
 		assert!(read_exif_header(&mut cursor).is_ok());
 	}
+
+  #[test]
+  fn test_simple_uint_exif_tag() {
+    const EXIF_TAG : &'static [u8] = &[0u8, 200u8, 0u8, 4u8, 0u8, 0u8, 0u8, 1u8, 0u8, 0u8, 0u8, 240u8];
+    const EXIF_POINTER_AREA : &'static [u8] = &[];
+
+    let mut cursor = Cursor::new(EXIF_TAG, Endianness::Big);
+    let tag = read_exif_tag(&mut cursor,
+      &mut Cursor::new(EXIF_POINTER_AREA, Endianness::Big));
+    let tag = tag.expect("tag should be ok");
+    assert_eq!(tag.tag_type, 200);
+    assert_eq!(tag.format, ExifFormat::UInt);
+    match tag.value {
+      ExifVariant::UInt(mut it) => {
+        assert_eq!(it.next().expect("first value in iterator should be ok"), 240);
+        assert!(it.next().is_none());
+      },
+      _ => panic!("tag value should be of type {}", EXIF_TAG[3])
+    };
+  }
+
+  #[test]
+  fn test_extended_uint_exif_tag() {
+    const EXIF_TAG : &'static [u8] = &[
+      0u8, 210u8,//tag
+      0u8, 4u8, //uint
+      0u8, 0u8, 0u8, 2u8, //2 values
+      0u8, 0u8, 0u8, 6u8]; //offset to data area;
+    /* first 4 bytes are skipped by offset in exif tag value */
+    const EXIF_POINTER_AREA : &'static [u8] = &[
+      0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+      0u8, 0u8, 0u8, 120u8,
+      0u8, 0u8, 0u8, 160u8];
+
+    let mut cursor = Cursor::new(EXIF_TAG, Endianness::Big);
+    let tag = read_exif_tag(&mut cursor,
+      &mut Cursor::new(EXIF_POINTER_AREA, Endianness::Big));
+    let tag = tag.expect("tag should be ok");
+    assert_eq!(tag.tag_type, 210);
+    assert_eq!(tag.format, ExifFormat::UInt);
+    match tag.value {
+      ExifVariant::UInt(mut it) => {
+        assert_eq!(it.next().expect("first value in iterator should be ok"), 120);
+        assert_eq!(it.next().expect("second value in iterator should be ok"), 160);
+        assert!(it.next().is_none(), "there should only be 2 values");
+      },
+      _ => panic!("tag value should be of type {}", EXIF_TAG[3])
+    };
+  }
 }
