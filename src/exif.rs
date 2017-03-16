@@ -73,31 +73,31 @@ impl ExifFormat {
   }
 
   fn variant_from_cursor<'a>(self, mut value_cursor: Cursor<'a>, len: u32)
-    -> ParseResult<ExifVariant<'a>>
+  -> ParseResult<ExifVariant<'a>>
   {
     let variant = match self {
       ExifFormat::UByte | ExifFormat::Binary =>
-        ExifVariant::Bytes(value_cursor.read_bytes_or_fail(len as usize)?),
+      ExifVariant::Bytes(value_cursor.read_bytes_or_fail(len as usize)?),
       ExifFormat::Text =>
-        ExifVariant::Text(value_cursor.read_str_or_fail(len as usize)?),
+      ExifVariant::Text(value_cursor.read_str_or_fail(len as usize)?),
       ExifFormat::UShort =>
-        ExifVariant::UShort(ValueIterator::<u16>::new(value_cursor, len)),
+      ExifVariant::UShort(ValueIterator::<u16>::new(value_cursor, len)),
       ExifFormat::UInt =>
-        ExifVariant::UInt(ValueIterator::<u32>::new(value_cursor, len)),
+      ExifVariant::UInt(ValueIterator::<u32>::new(value_cursor, len)),
       ExifFormat::UIntFraction =>
-        ExifVariant::UIntFraction(ValueIterator::<(u32, u32)>::new(value_cursor, len)),
+      ExifVariant::UIntFraction(ValueIterator::<(u32, u32)>::new(value_cursor, len)),
       ExifFormat::SignedByte =>
-        ExifVariant::SignedByte(ValueIterator::<i8>::new(value_cursor, len)),
+      ExifVariant::SignedByte(ValueIterator::<i8>::new(value_cursor, len)),
       ExifFormat::Short =>
-        ExifVariant::Short(ValueIterator::<i16>::new(value_cursor, len)),
+      ExifVariant::Short(ValueIterator::<i16>::new(value_cursor, len)),
       ExifFormat::Int =>
-        ExifVariant::Int(ValueIterator::<i32>::new(value_cursor, len)),
+      ExifVariant::Int(ValueIterator::<i32>::new(value_cursor, len)),
       ExifFormat::IntFraction =>
-        ExifVariant::IntFraction(ValueIterator::<(i32, i32)>::new(value_cursor, len)),
+      ExifVariant::IntFraction(ValueIterator::<(i32, i32)>::new(value_cursor, len)),
       ExifFormat::Float =>
-        ExifVariant::Float(ValueIterator::<f32>::new(value_cursor, len)),
+      ExifVariant::Float(ValueIterator::<f32>::new(value_cursor, len)),
       ExifFormat::Double =>
-        ExifVariant::Double(ValueIterator::<f64>::new(value_cursor, len))
+      ExifVariant::Double(ValueIterator::<f64>::new(value_cursor, len))
     };
     Ok(variant)
   }
@@ -211,33 +211,33 @@ pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<
 	let header = app1_cursor.read_bytes_or_fail(6)?;
 
 	if header != b"Exif\0\0" {
-	  let h = header;
-	  let header_array = [h[0], h[1], h[2], h[3], h[4], h[5]];
-		return Err(ParseError::InvalidExifHeader{ header: header_array });
-	}
+   let h = header;
+   let header_array = [h[0], h[1], h[2], h[3], h[4], h[5]];
+   return Err(ParseError::InvalidExifHeader{ header: header_array });
+ }
 
-	let mut tiff_marker = app1_cursor.clone();
-	let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
+ let mut tiff_marker = app1_cursor.clone();
+ let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
 
-	if tiff_header == 0x4949 {
-		app1_cursor.set_endianness(Endianness::Little);
-	}
-	else if tiff_header == 0x4D4D {
-		app1_cursor.set_endianness(Endianness::Big);
-	}
-	else {
-		return Err(ParseError::InvalidTiffHeader{ header: tiff_header });
-	}
+ if tiff_header == 0x4949 {
+  app1_cursor.set_endianness(Endianness::Little);
+}
+else if tiff_header == 0x4D4D {
+  app1_cursor.set_endianness(Endianness::Big);
+}
+else {
+  return Err(ParseError::InvalidTiffHeader{ header: tiff_header });
+}
 
-	let tiff_data_marker : u16 = app1_cursor.read_num_or_fail()?;
+let tiff_data_marker : u16 = app1_cursor.read_num_or_fail()?;
 
-	if tiff_data_marker != 0x002A {
-		return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });
-	}
+if tiff_data_marker != 0x002A {
+  return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });
+}
 
-	tiff_marker.set_endianness(app1_cursor.endianness());
+tiff_marker.set_endianness(app1_cursor.endianness());
 
-	return Ok(tiff_marker);
+return Ok(tiff_marker);
 }
 
 #[cfg(test)]

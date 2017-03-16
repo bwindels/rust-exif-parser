@@ -4,27 +4,27 @@ pub const JPEG_SAMPLE : &'static [u8] = b"\xFF\xD8\xFF\xE0\x00\x10\x4A\x46\x49\x
 pub const JPEG_SAMPLE_EXIF_OFFSET : usize = 24;
 
 pub struct SegmentFixture {
-  pub marker: SegmentMarker,
-  pub offset: usize,
-  pub len: usize
+	pub marker: SegmentMarker,
+	pub offset: usize,
+	pub len: usize
 }
 
 pub fn expected_segments() -> [SegmentFixture; 14] {
-    [
-    	SegmentFixture {marker: SegmentMarker::SOI,      offset: 2,    len: 0},
-		  SegmentFixture {marker: SegmentMarker::APP(0),   offset: 6,    len: 14},
-		  SegmentFixture {marker: SegmentMarker::APP(1),   offset: 24,   len: 578},
-		  SegmentFixture {marker: SegmentMarker::APP(1),   offset: 606, len: 2542},
-		  SegmentFixture {marker: SegmentMarker::APP(13),  offset: 3152, len: 118},
-		  SegmentFixture {marker: SegmentMarker::SOF(0),   offset: 3274, len: 15},
-		  SegmentFixture {marker: SegmentMarker::DHT,      offset: 3293, len: 29},
-		  SegmentFixture {marker: SegmentMarker::DHT,      offset: 3326, len: 179},
-		  SegmentFixture {marker: SegmentMarker::DHT,      offset: 3509, len: 29},
-		  SegmentFixture {marker: SegmentMarker::DHT,      offset: 3542, len: 179},
-		  SegmentFixture {marker: SegmentMarker::DQT,      offset: 3725, len: 65},
-		  SegmentFixture {marker: SegmentMarker::DQT,      offset: 3794, len: 65},
-		  SegmentFixture {marker: SegmentMarker::DRI,      offset: 3863, len: 2},
-		  SegmentFixture {marker: SegmentMarker::SOS,      offset: 3867, len: 0}
-    ]
+	[
+		SegmentFixture {marker: SegmentMarker::SOI,      offset: 2,    len: 0},
+		SegmentFixture {marker: SegmentMarker::APP(0),   offset: 6,    len: 14},
+		SegmentFixture {marker: SegmentMarker::APP(1),   offset: 24,   len: 578},
+		SegmentFixture {marker: SegmentMarker::APP(1),   offset: 606, len: 2542},
+		SegmentFixture {marker: SegmentMarker::APP(13),  offset: 3152, len: 118},
+		SegmentFixture {marker: SegmentMarker::SOF(0),   offset: 3274, len: 15},
+		SegmentFixture {marker: SegmentMarker::DHT,      offset: 3293, len: 29},
+		SegmentFixture {marker: SegmentMarker::DHT,      offset: 3326, len: 179},
+		SegmentFixture {marker: SegmentMarker::DHT,      offset: 3509, len: 29},
+		SegmentFixture {marker: SegmentMarker::DHT,      offset: 3542, len: 179},
+		SegmentFixture {marker: SegmentMarker::DQT,      offset: 3725, len: 65},
+		SegmentFixture {marker: SegmentMarker::DQT,      offset: 3794, len: 65},
+		SegmentFixture {marker: SegmentMarker::DRI,      offset: 3863, len: 2},
+		SegmentFixture {marker: SegmentMarker::SOS,      offset: 3867, len: 0}
+	]
 }
 
