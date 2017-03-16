@@ -154,7 +154,7 @@ impl<'a> Cursor<'a> {
   }
 
   pub fn read_num_or_fail<T: ByteSwappable>(&mut self) -> ParseResult<T> {
-    self.read_num().ok_or(ParseError::UnexpectedEOF)
+    self.read_num().ok_or(ParseError::UnexpectedEOF {offset: self.offset })
   }
 
   pub fn set_endianness(&mut self, end: Endianness) {
@@ -182,7 +182,7 @@ impl<'a> Cursor<'a> {
   }
 
   pub fn read_bytes_or_fail(&mut self, length: usize) -> ParseResult<&'a [u8]> {
-    self.read_bytes(length).ok_or(ParseError::UnexpectedEOF)
+    self.read_bytes(length).ok_or(ParseError::UnexpectedEOF {offset: self.offset })
   }
 
   pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
@@ -199,7 +199,7 @@ impl<'a> Cursor<'a> {
   }
 
   pub fn read_str_or_fail(&mut self, length: usize) -> ParseResult<&'a str> {
-    self.read_str(length).ok_or(ParseError::UnexpectedEOF)
+    self.read_str(length).ok_or(ParseError::UnexpectedEOF {offset: self.offset })
   }
 
   pub fn with_skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
@@ -211,7 +211,7 @@ impl<'a> Cursor<'a> {
       })
     }
     else {
-      Err(ParseError::UnexpectedEOF)
+      Err(ParseError::UnexpectedEOF {offset: self.offset })
     }
   }
 

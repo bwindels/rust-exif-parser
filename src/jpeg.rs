@@ -149,7 +149,7 @@ mod tests {
     let data : [u8; 0] = [];
     let cursor = Cursor::new(&data, Endianness::Little);
     let mut it = JPEGSegmentIterator::new(cursor);
-    assert!(it.next().unwrap().err().unwrap() == ParseError::UnexpectedEOF);
+    assert!(it.next().unwrap().is_err());
   }
 
   #[test]
