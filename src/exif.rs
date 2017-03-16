@@ -164,7 +164,7 @@ impl<'a, T: ExifValueReader + Copy + Sized> Iterator for ValueIterator<'a, T> {
       return None;
     }
 
-    self.i = remaining;
+    self.i += 1;
 
     let value = T::read_exif_value(&mut self.value_cursor);
     return Some(value.unwrap());
