@@ -94,14 +94,8 @@ impl<'a> JPEGSegmentIterator<'a> {
         } else {
             0
         };
-
-        let segment_cursor = self.cursor.branch(len as usize);
-        let segment_cursor = if let Some(c) = segment_cursor {
-          c
-        }
-        else {
-          return Ok(None);  //end iterator when we get at EOF
-        };
+        println!("len: {}", len);
+        let segment_cursor = self.cursor.with_max_len(len as usize);
 
         self.next_skip = len;
 
@@ -164,24 +158,26 @@ mod tests {
         let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
         let it = JPEGSegmentIterator::new(cursor);
 
+        let mapped = it.map(|r| r.unwrap());
+        let zipped = mapped.zip(&expected);
+
+        for ((marker, cursor), expected) in zipped {
+            assert_eq!(marker, expected.marker);
+            assert_eq!(cursor.offset(), expected.offset);
+            assert_eq!(cursor.len(), expected.len);
+        }
+    }
+
+    #[test]
+    fn test_app_segments_len() {
+        let expected = expected_segments();
+        let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
+        let it = JPEGSegmentIterator::new(cursor);
+
         assert_eq!(
             it.take_while(Result::is_ok).count(),
             expected.len()
         );
-
-        let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
-        let it = JPEGSegmentIterator::new(cursor);
-
-        let mapped = it
-            .map(|r| r.unwrap())
-            .map(|(marker, cursor)| (marker, cursor.len()));
-        
-        let zipped = mapped.zip(&expected);
-
-        for (given, expected) in zipped {
-            assert_eq!(given.0, expected.0);
-            assert_eq!(given.1, expected.1);
-        }
     }
 
     #[test]

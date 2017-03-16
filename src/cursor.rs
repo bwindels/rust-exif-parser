@@ -1,6 +1,7 @@
 use std::mem;
 use std::ptr;
 use std::str;
+use std::cmp;
 use ::error::{ParseError, ParseResult};
 
 #[derive(Debug, Clone, Copy)]
@@ -98,6 +99,7 @@ fn to_be<T: ByteSwappable>(n: T) -> T {
     n.swap_bytes()
 }
 
+#[derive(Clone)]
 pub struct Cursor<'a> {
     data: &'a [u8],
     offset: usize,
@@ -115,6 +117,10 @@ impl<'a> Cursor<'a> {
 
     pub fn len(&self) -> usize {
         self.data.len() - self.offset
+    }
+
+    pub fn offset(&self) -> usize {
+      self.offset
     }
 
     pub fn read_num<T: ByteSwappable>(&mut self) -> Option<T> {
@@ -182,11 +188,11 @@ impl<'a> Cursor<'a> {
     pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
         let bytes = self.read_bytes_without_advancing(length);
         if let Some(slice) = bytes {
-		    let str_slice = str::from_utf8(slice).ok();
-		    if str_slice.is_some() {
-			    self.offset = self.offset + length;
-		    }
-		    return str_slice;
+		      let str_slice = str::from_utf8(slice).ok();
+		      if str_slice.is_some() {
+			      self.offset = self.offset + length;
+		      }
+		      return str_slice;
         } else {
         	return None;
         }
@@ -196,23 +202,13 @@ impl<'a> Cursor<'a> {
       self.read_str(length).ok_or(ParseError::UnexpectedEOF)
     }
 
-    pub fn branch(&self, length: usize) -> Option<Cursor<'a>> {
-        if self.len() >= length {
-            let data_subset = &self.data[self.offset .. self.offset + length];
-            Some(Cursor::new(data_subset, self.endianness))
-        } else {
-            None
-        }
-    }
-    
-    pub fn branch_or_fail(&self, length: usize) -> ParseResult<Cursor<'a>> {
-      self.branch(length).ok_or(ParseError::UnexpectedEOF)
-    }
-
     pub fn skip(&self, offset: usize) -> Option<Cursor<'a>> {
         if self.len() >= offset {
-            let data_subset = &self.data[self.offset + offset .. ];
-            Some(Cursor::new(data_subset, self.endianness))
+            Some(Cursor {
+              data: self.data,
+              offset: self.offset + offset,
+              endianness: self.endianness
+            })
         } else {
             None
         }
@@ -220,6 +216,16 @@ impl<'a> Cursor<'a> {
 
     pub fn skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
       self.skip(offset).ok_or(ParseError::UnexpectedEOF)
+    }
+
+    pub fn with_max_len(&self, max_len: usize) -> Cursor<'a> {
+      let abs_len = self.offset + cmp::min(self.len(), max_len);
+      let truncated_data = &self.data[0 .. abs_len];
+      Cursor {
+        data: truncated_data,
+        offset: self.offset,
+        endianness: self.endianness
+      }
     }
 }
 
@@ -322,24 +328,22 @@ mod tests {
     }
 
     #[test]
-    fn test_branch() {
+    fn test_with_max_len() {
         let mut stream = ::Cursor::new(DATA, ::Endianness::Big);
-        let mut branched_stream = stream.branch(2).unwrap();
+        let mut truncated_stream = stream.with_max_len(2);
         let result = Some(0xDEAD);
 
         assert_eq!(stream.read_num::<u16>(), result);
-        assert_eq!(branched_stream.read_num::<u16>(), result);
+        assert_eq!(truncated_stream.read_num::<u16>(), result);
 
         assert!(stream.read_num::<u16>().is_some());
-        assert!(branched_stream.read_num::<u16>().is_none());
+        assert!(truncated_stream.read_num::<u16>().is_none());
     }
 
     #[test]
-    fn test_branch_length_check() {
+    fn test_with_max_len_check() {
         let stream = ::Cursor::new(DATA, ::Endianness::Big);
-
-        assert!(stream.branch(4).is_some());
-        assert!(stream.branch(5).is_none());
+        assert_eq!(stream.with_max_len(5).len(), 4);
     }
 
     #[test]

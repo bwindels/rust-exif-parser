@@ -215,7 +215,7 @@ pub fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<
 		return Err(ParseError::InvalidExifHeader{ header: header_array });
 	}
 
-	let mut tiff_marker = app1_cursor.branch_or_fail(app1_cursor.len())?;
+	let mut tiff_marker = app1_cursor.clone();
 	let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
 
 	if tiff_header == 0x4949 {
