@@ -1,8 +1,6 @@
-use std::iter::Iterator;
-use ::cursor::{Cursor, Endianness, ByteSwappable};
+use ::cursor::{Cursor};
 use ::component::ComponentIterator;
 use ::error::{ParseError, ParseResult};
-use std::marker::{Sized, PhantomData};
 
 pub const EXIF_TAG_SIZE : usize = 2 + 2 + 4 + 4;
 
