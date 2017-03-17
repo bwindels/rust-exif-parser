@@ -14,6 +14,14 @@ pub struct SectionIterator<'a> {
   i: u32
 }
 
+impl<'a> SectionIterator<'a> {
+
+  pub fn byte_size(&self) -> usize {
+    EXIF_TAG_SIZE * self.len as usize
+  }
+
+} 
+
 impl<'a> Iterator for SectionIterator<'a> {
   type Item = ParseResult<RawExifTag<'a>>;
 
