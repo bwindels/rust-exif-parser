@@ -1,6 +1,8 @@
 mod cursor;
 mod jpeg;
-mod exif;
+mod component;
+mod tag;
+mod section; 
 mod error;
 #[cfg(test)]
 mod test_fixtures;

@@ -5,6 +5,7 @@ pub enum ParseError {
   InvalidTiffHeader{ header: u16 },
   InvalidTiffData{ data: u16 },
   UnexpectedEOF { offset: usize },
+  ValueOutOfBounds { offset: usize },
   InvalidJPEGSegmentHeader{ header: u8 }
 }
 
