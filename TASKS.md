@@ -1,7 +1,10 @@
  - [x] Make tests run again
  - [ ] Think about nicer API for skipping ahead in a cursor/make cursor immutable
- - [ ] Write unit test for EXIF value parsing
- - [ ] Write code to iterate over IFD sections
- - [ ] Write unit tests for IFD sections
+ - [ ] Decide whether to pass Cursor values or refs
+ - [x] Write unit test for EXIF value parsing
+ - [x] Write code to iterate over a single IFD section
+ - [x] Write unit tests for a single IFD section
+ - [ ] Write code to iterate over all IFD sections
+ - [ ] Write unit tests for all IFD sections
  - [ ] Simplify EXIF values + tests
  - [ ] See if we can use the byteorder crate instead off our own unsafe code
