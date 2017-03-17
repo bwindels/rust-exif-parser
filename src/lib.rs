@@ -1,9 +1,10 @@
 mod cursor;
+mod error;
 mod jpeg;
 mod component;
 mod tag;
 mod section; 
-mod error;
+//mod tags;
 #[cfg(test)]
 mod test_fixtures;
 
