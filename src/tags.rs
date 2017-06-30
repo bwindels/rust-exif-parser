@@ -96,7 +96,7 @@ pub enum Section {
 }
 
 pub fn read_tags<'a>(mut app1_cursor: Cursor<'a>) -> ParseResult<ExifTagIterator<'a>> {
-  let tiff_marker = read_exif_header(&mut app1_cursor)?;
+  let tiff_marker = read_exif_header(app1_cursor)?;
   let mut ifd0_cursor = app1_cursor;
   let ifd0_section = read_section(ifd0_cursor.clone(), &tiff_marker)?;
   
@@ -111,7 +111,7 @@ pub fn read_tags<'a>(mut app1_cursor: Cursor<'a>) -> ParseResult<ExifTagIterator
 }
 
 
-fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>> {
+fn read_exif_header<'a>(mut app1_cursor: Cursor<'a>) -> ParseResult<Cursor<'a>> {
   let header = app1_cursor.read_bytes_or_fail(6)?;
 
   if header != b"Exif\0\0" {
@@ -120,28 +120,25 @@ fn read_exif_header<'a>(app1_cursor: &mut Cursor<'a>) -> ParseResult<Cursor<'a>>
     return Err(ParseError::InvalidExifHeader{ header: header_array });
   }
 
-  let mut tiff_marker = app1_cursor.clone();
   let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
-
-  if tiff_header == 0x4949 {
-    app1_cursor.set_endianness(Endianness::Little);
-  }
-  else if tiff_header == 0x4D4D {
-    app1_cursor.set_endianness(Endianness::Big);
-  }
-  else {
-    return Err(ParseError::InvalidTiffHeader{ header: tiff_header });
-  }
-
   let tiff_data_marker : u16 = app1_cursor.read_num_or_fail()?;
+
+  let tiff_cursor = match tiff_header {
+    0x4949 => Ok(app1_cursor.with_endianness(Endianness::Little)),
+    0x4D4D => Ok(app1_cursor.with_endianness(Endianness::Big)),
+    _ => Err(ParseError::InvalidTiffHeader{ header: tiff_header })
+  };
+
+  //return header error before data error
+  if let Err(e) = tiff_cursor {
+    return Err(e);
+  }
 
   if tiff_data_marker != 0x002A {
     return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });
   }
 
-  tiff_marker.set_endianness(app1_cursor.endianness());
-
-  return Ok(tiff_marker);
+  return tiff_cursor;
 }
 
 #[cfg(test)]

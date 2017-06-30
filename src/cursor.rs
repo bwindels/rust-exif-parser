@@ -157,8 +157,12 @@ impl<'a> Cursor<'a> {
     self.read_num().ok_or(ParseError::UnexpectedEOF {offset: self.offset })
   }
 
-  pub fn set_endianness(&mut self, end: Endianness) {
-    self.endianness = end;
+  pub fn with_endianness(&mut self, end: Endianness) -> Cursor<'a> {
+    Cursor {
+      data: self.data,
+      offset: self.offset,
+      endianness: end
+    }
   }
 
   pub fn endianness(&self) -> Endianness {
@@ -266,7 +270,7 @@ mod tests {
   fn test_read_u16_switch_endianness() {
     let mut stream = ::Cursor::new(&DATA, ::Endianness::Big);
     assert_eq!(stream.read_num::<u16>(), Some(0xDEAD));
-    stream.set_endianness(::Endianness::Little);
+    let mut stream = stream.with_endianness(::Endianness::Little);
     assert_eq!(stream.read_num::<u16>(), Some(0xFECA));
   }
 
