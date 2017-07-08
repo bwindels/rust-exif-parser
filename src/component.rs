@@ -3,7 +3,7 @@ use ::cursor::{Cursor, ByteSwappable};
 use ::error::ParseResult;
 use std::marker::{Sized, PhantomData};
 
-trait ExifValueReader {
+pub trait ExifValueReader {
   fn read_exif_value(cursor: &mut Cursor) -> ParseResult<Self> where Self: Sized + Copy;
 }
 

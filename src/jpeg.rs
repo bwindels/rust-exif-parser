@@ -142,7 +142,6 @@ mod tests {
     JPEG_SAMPLE,
     expected_segments
   };
-  use ::error::ParseError;
 
   #[test]
   fn test_empty() {
