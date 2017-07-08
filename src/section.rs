@@ -38,7 +38,7 @@ impl<'a> Iterator for SectionIterator<'a> {
       };
     }
 
-    let tag = read_exif_tag(&mut (self.cursor.clone()), self.tiff_marker);
+    let tag = read_exif_tag(self.cursor, self.tiff_marker);
     self.i += 1;
 
     return Some(tag);

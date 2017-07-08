@@ -202,10 +202,11 @@ mod tests {
 
   #[test]
   fn test_read_exif_header() {
-    let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
+    let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
     assert!(read_exif_header(cursor).is_err());
-    let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
-    cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
+
+    let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
+    let cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
     let mut tiff_cursor = read_exif_header(cursor).unwrap();
     assert_eq!(tiff_cursor.read_num::<u16>(), Some(0x002A) );
   }

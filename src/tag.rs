@@ -110,7 +110,7 @@ pub struct RawExifTag<'a> {
   pub value: ExifVariant<'a>
 }
 
-pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: Cursor<'a>) -> ParseResult<RawExifTag<'a>> {
+pub fn read_exif_tag<'a>(mut cursor: Cursor<'a>, tiff_cursor: Cursor<'a>) -> ParseResult<RawExifTag<'a>> {
   let tag_type : u16 = cursor.read_num_or_fail()?;
   let format_num : u16 = cursor.read_num_or_fail()?;
   let components : u32 = cursor.read_num_or_fail()?;
@@ -121,11 +121,7 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: Cursor<'a>) -> Pa
     let tiff_offset : u32 = cursor.read_num_or_fail()?;
     tiff_cursor.with_skip_or_fail(tiff_offset as usize)?
   } else {
-    let c = cursor.clone();
-    //move the cursor ref we got past this exif value
-    //so cursor is at the next value
-    *cursor = cursor.with_skip_or_fail(4)?;
-    c
+    cursor
   };
 
   //to reduce the complexity of reading a single tag,
@@ -168,8 +164,8 @@ mod tests {
     ];
     const EXIF_POINTER_AREA : &'static [u8] = &[];
 
-    let mut cursor = Cursor::new(EXIF_TAG, Endianness::Big);
-    let tag = read_exif_tag(&mut cursor,
+    let cursor = Cursor::new(EXIF_TAG, Endianness::Big);
+    let tag = read_exif_tag(cursor,
       Cursor::new(EXIF_POINTER_AREA, Endianness::Big));
     let tag = tag.expect("tag should be ok");
     assert_eq!(tag.tag_type, 200);
@@ -192,9 +188,9 @@ mod tests {
       65u8, 66u8, 67u8, 0u8, //ABC
     ]; //offset to data area;
     const EXIF_POINTER_AREA : &'static [u8] = &[];
-    let mut cursor = Cursor::new(EXIF_TAG, Endianness::Big);
+    let cursor = Cursor::new(EXIF_TAG, Endianness::Big);
     let data_cursor = Cursor::new(EXIF_POINTER_AREA, Endianness::Big);
-    let mut tag = read_exif_tag(&mut cursor, data_cursor)
+    let tag = read_exif_tag(cursor, data_cursor)
       .expect("read should not fail");
     assert_eq!(tag.tag_type, 210);
     assert_eq!(tag.format, ExifFormat::Text);
@@ -217,8 +213,8 @@ mod tests {
       0u8, 0u8, 0u8, 120u8,
       0u8, 0u8, 0u8, 160u8];
 
-    let mut cursor = Cursor::new(EXIF_TAG, Endianness::Big);
-    let tag = read_exif_tag(&mut cursor,
+    let cursor = Cursor::new(EXIF_TAG, Endianness::Big);
+    let tag = read_exif_tag(cursor,
       Cursor::new(EXIF_POINTER_AREA, Endianness::Big));
     let tag = tag.expect("tag should be ok");
     assert_eq!(tag.tag_type, 210);
