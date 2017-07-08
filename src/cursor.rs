@@ -102,8 +102,6 @@ fn to_be<T: ByteSwappable>(n: T) -> T {
 #[derive(Clone, Copy)]
 pub struct Cursor<'a> {
   data: &'a [u8],
-  //TODO: instead of using offset, we can reslice the slice every time we advance
-  offset: usize,
   endianness: Endianness
 }
 
@@ -111,23 +109,22 @@ impl<'a> Cursor<'a> {
   pub fn new(data: &'a [u8], init_endian: Endianness) -> Cursor<'a> {
     Cursor {
       data: data,
-      offset: 0,
       endianness: init_endian
     }
   }
 
-  pub fn len(&self) -> usize {
-    self.data.len() - self.offset
+  pub fn offset_from(&self, parent: &Cursor<'a>) -> usize {
+    self.data.as_ptr() as usize - parent.data.as_ptr() as usize
   }
 
-  pub fn offset(&self) -> usize {
-    self.offset
+  pub fn len(&self) -> usize {
+    self.data.len()
   }
 
   pub fn read_num<T: ByteSwappable>(&mut self) -> Option<T> {
     let size = mem::size_of::<T>();
 
-    if self.len() >= size {
+    if self.data.len() >= size {
       let n : T = unsafe {
         mem::uninitialized()
       };
@@ -135,9 +132,7 @@ impl<'a> Cursor<'a> {
       let dst : *mut u8 = unsafe {
         mem::transmute(&n)
       };
-      let src = unsafe {
-        self.data.as_ptr().offset(self.offset as isize)
-      };
+      let src = unsafe { self.data.as_ptr() };
       unsafe {
         ptr::copy_nonoverlapping(src, dst, size);
       };
@@ -146,7 +141,7 @@ impl<'a> Cursor<'a> {
         Endianness::Big => to_be(n)
       };
 
-      self.offset += size;
+      self.data = &self.data[size .. ];
 
       Some(adjusted_n)
     }
@@ -156,13 +151,12 @@ impl<'a> Cursor<'a> {
   }
 
   pub fn read_num_or_fail<T: ByteSwappable>(&mut self) -> ParseResult<T> {
-    self.read_num().ok_or(ParseError::UnexpectedEOF {offset: self.offset })
+    self.read_num().ok_or(ParseError::UnexpectedEOF)
   }
 
   pub fn with_endianness(&mut self, end: Endianness) -> Cursor<'a> {
     Cursor {
       data: self.data,
-      offset: self.offset,
       endianness: end
     }
   }
@@ -172,9 +166,8 @@ impl<'a> Cursor<'a> {
   }
 
   fn read_bytes_without_advancing(&self, length: usize) -> Option<&'a [u8]> {
-    if self.len() >= length {
-      let end_index = self.offset + length;
-      let byte_slice = &self.data[self.offset .. end_index];
+    if self.data.len() >= length {
+      let byte_slice = &self.data[0 .. length];
       return Some(byte_slice);
     }
     return None
@@ -182,13 +175,13 @@ impl<'a> Cursor<'a> {
 
   pub fn read_bytes(&mut self, length: usize) -> Option<&'a [u8]> {
     return self.read_bytes_without_advancing(length).map(|b| {
-      self.offset = self.offset + length;
+      self.data = &self.data[length .. ];
       return b;
     });
   }
 
   pub fn read_bytes_or_fail(&mut self, length: usize) -> ParseResult<&'a [u8]> {
-    self.read_bytes(length).ok_or(ParseError::UnexpectedEOF {offset: self.offset })
+    self.read_bytes(length).ok_or(ParseError::UnexpectedEOF)
   }
 
   pub fn read_str(&mut self, length: usize) -> Option<&'a str> {
@@ -196,37 +189,35 @@ impl<'a> Cursor<'a> {
     if let Some(slice) = bytes {
       let str_slice = str::from_utf8(slice).ok();
       if str_slice.is_some() {
-       self.offset = self.offset + length;
-     }
-     return str_slice;
-   } else {
-     return None;
-   }
+        self.data = &self.data[length .. ];
+      }
+      return str_slice;
+    } else {
+      return None;
+    }
   }
 
   pub fn read_str_or_fail(&mut self, length: usize) -> ParseResult<&'a str> {
-    self.read_str(length).ok_or(ParseError::UnexpectedEOF {offset: self.offset })
+    self.read_str(length).ok_or(ParseError::UnexpectedEOF)
   }
 
   pub fn with_skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
-    if self.len() >= offset {
+    if self.data.len() >= offset {
       Ok(Cursor {
-        data: self.data,
-        offset: self.offset + offset,
+        data: &self.data[offset ..],
         endianness: self.endianness
       })
     }
     else {
-      Err(ParseError::UnexpectedEOF {offset: self.offset })
+      Err(ParseError::UnexpectedEOF)
     }
   }
 
   pub fn with_max_len(&self, max_len: usize) -> Cursor<'a> {
-    let abs_len = self.offset + cmp::min(self.len(), max_len);
-    let truncated_data = &self.data[0 .. abs_len];
+    let max_len = cmp::min(self.len(), max_len);
+    let truncated_data = &self.data[0 .. max_len];
     Cursor {
       data: truncated_data,
-      offset: self.offset,
       endianness: self.endianness
     }
   }

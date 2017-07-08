@@ -155,15 +155,15 @@ mod tests {
   #[test]
   fn test_app_segments_content() {
     let expected = expected_segments();
-    let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Big);
-    let it = JPEGSegmentIterator::new(cursor);
+    let c = Cursor::new(JPEG_SAMPLE, Endianness::Big);
+    let it = JPEGSegmentIterator::new(c);
 
     let mapped = it.map(|r| r.unwrap());
     let zipped = mapped.zip(&expected);
 
     for ((marker, cursor), expected) in zipped {
       assert_eq!(marker, expected.marker);
-      assert_eq!(cursor.offset(), expected.offset);
+      assert_eq!(cursor.offset_from(&c), expected.offset);
       assert_eq!(cursor.len(), expected.len);
     }
   }

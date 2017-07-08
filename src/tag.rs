@@ -133,7 +133,7 @@ pub fn read_exif_tag<'a>(cursor: &mut Cursor<'a>, tiff_cursor: Cursor<'a>) -> Pa
   //sense to read half of an exif tag,
   //and deal with errors in the ComponentIterator
   if value_cursor.len() < total_values_bytes {
-    return Err(ParseError::UnexpectedEOF { offset: value_cursor.offset() } );
+    return Err(ParseError::UnexpectedEOF);
   }
 
   let variant = format.variant_from_cursor(
