@@ -132,7 +132,7 @@ impl<'a> Cursor<'a> {
       let dst : *mut u8 = unsafe {
         mem::transmute(&n)
       };
-      let src = unsafe { self.data.as_ptr() };
+      let src = self.data.as_ptr();
       unsafe {
         ptr::copy_nonoverlapping(src, dst, size);
       };
