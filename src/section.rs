@@ -9,7 +9,7 @@ use ::tag::{
 
 pub struct SectionIterator<'a> {
 	cursor: Cursor<'a>,
-  tiff_marker: &'a Cursor<'a>,
+  tiff_marker: Cursor<'a>,
   len: u32,
   i: u32
 }
@@ -38,7 +38,7 @@ impl<'a> Iterator for SectionIterator<'a> {
       };
     }
 
-    let tag = read_exif_tag(&mut (self.cursor.clone()), &self.tiff_marker);
+    let tag = read_exif_tag(&mut (self.cursor.clone()), self.tiff_marker);
     self.i += 1;
 
     return Some(tag);
@@ -50,7 +50,7 @@ impl<'a> Iterator for SectionIterator<'a> {
   }
 }
 
-pub fn read_section<'a>(mut cursor: Cursor<'a>, tiff_marker: &'a Cursor<'a>) -> ParseResult<SectionIterator<'a>> {
+pub fn read_section<'a>(mut cursor: Cursor<'a>, tiff_marker: Cursor<'a>) -> ParseResult<SectionIterator<'a>> {
 	let len : u32 = cursor.read_num_or_fail()?;
   Ok(SectionIterator {
     cursor: cursor,
@@ -83,7 +83,7 @@ mod tests {
     const EXIF_POINTER_AREA : &'static [u8] = &[];
     let cursor = Cursor::new(EXIF_SECTION, Endianness::Big);
     let data_cursor = Cursor::new(EXIF_POINTER_AREA, Endianness::Big);
-    let mut section = read_section(cursor, &data_cursor)
+    let mut section = read_section(cursor, data_cursor)
       .expect("read should not fail");
     let first_tag = section.next()
       .expect("first value should be some")

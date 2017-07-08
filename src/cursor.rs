@@ -99,7 +99,7 @@ fn to_be<T: ByteSwappable>(n: T) -> T {
   n.swap_bytes()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Cursor<'a> {
   data: &'a [u8],
   //TODO: instead of using offset, we can reslice the slice every time we advance
