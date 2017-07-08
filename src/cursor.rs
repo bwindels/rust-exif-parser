@@ -102,6 +102,7 @@ fn to_be<T: ByteSwappable>(n: T) -> T {
 #[derive(Clone)]
 pub struct Cursor<'a> {
   data: &'a [u8],
+  //TODO: instead of using offset, we can reslice the slice every time we advance
   offset: usize,
   endianness: Endianness
 }
@@ -130,6 +131,7 @@ impl<'a> Cursor<'a> {
       let n : T = unsafe {
         mem::uninitialized()
       };
+      //TODO: taking a mut pointer can be done safely IIRC
       let dst : *mut u8 = unsafe {
         mem::transmute(&n)
       };
