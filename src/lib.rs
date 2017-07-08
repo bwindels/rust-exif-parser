@@ -4,7 +4,7 @@ mod jpeg;
 mod component;
 mod tag;
 mod section; 
-//mod tags;
+mod tags;
 #[cfg(test)]
 mod test_fixtures;
 
