@@ -12,81 +12,153 @@ use ::cursor::{
 };
 use ::tag::RawExifTag;
 
-pub struct ExifTagIterator<'a> {
+pub struct SectionOffsetIterator {
+  has_consumed_ifd0: bool,
+  ifd1_offset: Option<u32>,
   gps_offset: Option<u32>,
   sub_ifd_offset: Option<u32>,
-  interop_offset: Option<u32>,
-  current_section: SectionIterator<'a>,
-  current_ifd_marker: Section,
+  interop_offset: Option<u32>
+}
+
+impl SectionOffsetIterator {
+
+  pub fn new() -> SectionOffsetIterator {
+    SectionOffsetIterator {
+      has_consumed_ifd0: false,
+      //TODO: cleanup the 4 ... //Some(ifd0_length + 4u32)
+      ifd1_offset: None,
+      gps_offset: None,
+      sub_ifd_offset: None,
+      interop_offset: None
+    }
+  }
+
+  pub fn set_ifd1_offset(&mut self, offset: u32) {
+    self.ifd1_offset = Some(offset);
+  }
+
+  pub fn set_gps_offset(&mut self, offset: u32) {
+    self.gps_offset = Some(offset);
+  }
+
+  pub fn set_sub_ifd_offset(&mut self, offset: u32) {
+    self.sub_ifd_offset = Some(offset);
+  }
+
+  pub fn set_interop_offset(&mut self, offset: u32) {
+    self.interop_offset = Some(offset);
+  }
+}
+
+impl Iterator for SectionOffsetIterator {
+
+  type Item = (u32, Section);
+
+  fn next(&mut self) -> Option<Self::Item> {
+    if !self.has_consumed_ifd0 {
+      self.has_consumed_ifd0 = true;
+      return Some((0, Section::IFD0));
+    }
+    if let Some(offset) = self.ifd1_offset {
+      self.ifd1_offset = None;
+      return Some((offset, Section::IFD1));
+    }
+    if let Some(offset) = self.gps_offset {
+      self.gps_offset = None;
+      return Some((offset, Section::GPS));
+    }
+    if let Some(offset) = self.sub_ifd_offset {
+      self.sub_ifd_offset = None;
+      return Some((offset, Section::SubIFD));
+    }
+    if let Some(offset) = self.interop_offset {
+      self.interop_offset = None;
+      return Some((offset, Section::InteropIFD));
+    }
+    else {
+      return None;
+    }
+  }
+}
+
+
+
+pub struct ExifTagIterator<'a> {
+  section_offsets: SectionOffsetIterator,
+  current_section: Option<(SectionIterator<'a>, Section)>,
   tiff_marker: Cursor<'a>
 }
 
 impl<'a> ExifTagIterator<'a> {
 
-  fn find_next_section(&mut self) -> Option<ParseResult<(SectionIterator<'a>, Section)>> {
-    if self.current_ifd_marker == Section::IFD0 {
-      //TODO: cleanup the 4 ...
-      let ifd1_offset = 4usize + self.current_section.byte_size();
-      let section = self.open_section(ifd1_offset);
-      return Some(section.map(|s| (s, Section::IFD1)));
+  pub fn new(tiff_marker: Cursor<'a>) -> ExifTagIterator<'a> {
+    ExifTagIterator {
+      section_offsets: SectionOffsetIterator::new(),
+      current_section: None,
+      tiff_marker: tiff_marker
     }
-    else if self.gps_offset.is_some() {
-      let section = self.open_section(self.gps_offset.unwrap() as usize);
-      self.gps_offset = None;
-      return Some(section.map(|s| (s, Section::GPS)));
-    }
-    else if self.sub_ifd_offset.is_some() {
-      let section = self.open_section(self.sub_ifd_offset.unwrap() as usize);
-      self.sub_ifd_offset = None;
-      return Some(section.map(|s| (s, Section::SubIFD)));
-    }
-    else if self.interop_offset.is_some() {
-      let section = self.open_section(self.interop_offset.unwrap() as usize);
-      self.interop_offset = None;
-      return Some(section.map(|s| (s, Section::InteropIFD)));
-    }
-    return None;
   }
 
-  fn open_section(&self, offset: usize) -> ParseResult<SectionIterator<'a>> {
-    let cursor = self.tiff_marker.with_skip_or_fail(offset)?;
-    read_section(cursor, &self.tiff_marker)
+  fn open_section(&self, offset: u32) -> ParseResult<SectionIterator<'a>> {
+    let cursor = self.tiff_marker.with_skip_or_fail(offset as usize)?;
+    read_section(cursor, self.tiff_marker)
   }
 
+}
+
+
+fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator, tag: &RawExifTag<'a>) {
+  match tag.tag_type {
+    0x1234 => offset_iter.set_ifd1_offset(5u32),
+    _ => ()
+  }
 }
 
 impl<'a> Iterator for ExifTagIterator<'a> {
+
   type Item = ParseResult<(RawExifTag<'a>, Section)>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    let mut tag = self.current_section.next();
+    loop {
+      if let Some((ref mut section_it, ref id)) = self.current_section {
+        if let Some(tag) = section_it.next() {
 
-    while tag.is_none() {
-      let next_section = self.find_next_section();
-      match next_section {
-        Some(result) => {
-          self.current_section = it;
-          self.current_ifd_marker = s;
-        },
-        //no more sections, end iterator
-        None => return None
-      };
-      tag = self.current_section.next();
+          if let Ok(ref t) = tag {
+            update_offset_iter(&mut self.section_offsets, t);
+          }
+
+          let tag_with_section_id = tag.map(|t| (t, *id) );
+
+          return Some(tag_with_section_id);
+        }
+      }
+
+      match self.section_offsets.next() {
+        None => return None,
+        Some((offset, id)) => {
+          let section = self.open_section(offset);
+          match section {
+            Ok(section_it) => self.current_section = Some( (section_it, id) ),
+            Err(e) => return Some(Err(e))
+          };
+        }
+      }
     }
-
-    let tag_and_ifd = tag.map(|tag| (tag, self.current_ifd_marker));
-
-    Some(tag_and_ifd)
   }
 
   fn size_hint(&self) -> (usize, Option<usize>) {
-    let min_len = self.current_section.size_hint().0;
-    (min_len, None)
+    if let Some( (ref section_it, _ ) ) = self.current_section {
+      let (min_len, _) = section_it.size_hint();
+      return (min_len, None);
+    }
+    else {
+      return (0, None);
+    }
   }
 
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Section {
   IFD0,
   IFD1,
@@ -95,19 +167,9 @@ pub enum Section {
   InteropIFD
 }
 
-pub fn read_tags<'a>(mut app1_cursor: Cursor<'a>) -> ParseResult<ExifTagIterator<'a>> {
+pub fn read_tags<'a>(app1_cursor: Cursor<'a>) -> ParseResult<ExifTagIterator<'a>> {
   let tiff_marker = read_exif_header(app1_cursor)?;
-  let mut ifd0_cursor = app1_cursor;
-  let ifd0_section = read_section(ifd0_cursor.clone(), &tiff_marker)?;
-  
-  Ok(ExifTagIterator {
-    gps_offset: None,
-    sub_ifd_offset: None,
-    interop_offset: None,
-    current_section: ifd0_section,
-    current_ifd_marker: Section::IFD0,
-    tiff_marker: tiff_marker
-  })
+  Ok(ExifTagIterator::new(tiff_marker))
 }
 
 
@@ -121,24 +183,22 @@ fn read_exif_header<'a>(mut app1_cursor: Cursor<'a>) -> ParseResult<Cursor<'a>> 
   }
 
   let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
-  let tiff_data_marker : u16 = app1_cursor.read_num_or_fail()?;
 
   let tiff_cursor = match tiff_header {
-    0x4949 => Ok(app1_cursor.with_endianness(Endianness::Little)),
-    0x4D4D => Ok(app1_cursor.with_endianness(Endianness::Big)),
-    _ => Err(ParseError::InvalidTiffHeader{ header: tiff_header })
+    0x4949 => app1_cursor.with_endianness(Endianness::Little),
+    0x4D4D => app1_cursor.with_endianness(Endianness::Big),
+    _ => return Err(ParseError::InvalidTiffHeader{ header: tiff_header })
   };
 
-  //return header error before data error
-  if let Err(e) = tiff_cursor {
-    return Err(e);
-  }
-
+  //this is a marker in the data to check
+  //the endianess has been properly detected
+  //if not you'd read 0x2A00
+  let tiff_data_marker : u16 = tiff_cursor.clone().read_num_or_fail()?;
   if tiff_data_marker != 0x002A {
     return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });
   }
 
-  return tiff_cursor;
+  return Ok(tiff_cursor);
 }
 
 #[cfg(test)]
@@ -153,10 +213,11 @@ mod tests {
   #[test]
   fn test_read_exif_header() {
     let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
-    assert!(read_exif_header(&mut cursor).is_err());
+    assert!(read_exif_header(cursor).is_err());
     let mut cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
     cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
-    assert!(read_exif_header(&mut cursor).is_ok());
+    let mut tiff_cursor = read_exif_header(cursor).unwrap();
+    assert_eq!(tiff_cursor.read_num::<u16>(), Some(0x002A) );
   }
 
 }
