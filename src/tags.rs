@@ -146,16 +146,6 @@ impl<'a> Iterator for ExifTagIterator<'a> {
     }
   }
 
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    if let Some( (ref section_it, _ ) ) = self.current_section {
-      let (min_len, _) = section_it.size_hint();
-      return (min_len, None);
-    }
-    else {
-      return (0, None);
-    }
-  }
-
 }
 
 #[derive(PartialEq, Clone, Copy)]
