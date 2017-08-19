@@ -6,6 +6,13 @@
  - [x] Write unit tests for a single IFD section
  - [_] Write code to iterate over all IFD sections
  	mostly done, just need to handle tags that describe offsets to other IFDs
+ - [ ] Give every container an `iter()` method instead of directly containing
+        iterators. This way we don't need to be able to mutate the tag just to
+        iterate them. This is also a guideline for rust libraries. This is
+        a problem detected in the task above, because reading the tag for getting
+        the offset gives the same problem. You'd either have to own and move the
+        tag back and forth, or borrow the tag mutubly, but then you couldn't iterate
+        it a second time.
  - [ ] Write unit tests for all IFD sections
  - [ ] add step to map RawExifTag -> ExifTag
  	tag_type as enum with tag names

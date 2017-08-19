@@ -10,7 +10,10 @@ use ::cursor::{
   Cursor,
   Endianness
 };
-use ::tag::RawExifTag;
+use ::tag::{
+  RawExifTag,
+  ExifVariant
+};
 
 pub struct SectionOffsetIterator {
   has_consumed_ifd0: bool,
@@ -106,8 +109,6 @@ impl<'a> ExifTagIterator<'a> {
 
 }
 
-<<<<<<< Updated upstream
-=======
 /** get the offset from a tag meant to contain the offset to another IFD */
 fn offset_from_tag<'a>(tag: &RawExifTag<'a>) -> Option<u32> {
   match tag.value {
@@ -115,11 +116,25 @@ fn offset_from_tag<'a>(tag: &RawExifTag<'a>) -> Option<u32> {
     _ => None
   }
 }
->>>>>>> Stashed changes
 
-fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator, tag: &RawExifTag<'a>) {
-  match tag.tag_type {
-    0x1234 => offset_iter.set_ifd1_offset(5u32),
+/** The offset to other IFDs are (apart from IFD1) in tags themselves.
+    Here we update the offset iterator with offsets it finds in tags as we go */
+fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator,
+                          section_id: Section, tag: &RawExifTag<'a>) {
+
+  match (section_id, tag.tag_type) {
+    (Section::IFD0, 0x8825) =>
+      if let Some(offset) = offset_from_tag(&tag) {
+        offset_iter.set_gps_offset(offset)
+      },
+    (Section::IFD0, 0x8769) =>
+      if let Some(offset) = offset_from_tag(&tag) {
+        offset_iter.set_sub_ifd_offset(offset)
+      },
+    (Section::SubIFD, 0xA005) =>
+      if let Some(offset) = offset_from_tag(&tag) {
+        offset_iter.set_interop_offset(offset)
+      },
     _ => ()
   }
 }
@@ -136,7 +151,7 @@ impl<'a> Iterator for ExifTagIterator<'a> {
         if let Some(tag) = section_it.next() {
           //see if the tag contains an offset to another IFD
           if let Ok(ref t) = tag {
-            update_offset_iter(&mut self.section_offsets, t);
+            update_offset_iter(&mut self.section_offsets, *id, t);
           }
           //include the section enum value in the result,
           //because tag numbers are only unique inside a section
