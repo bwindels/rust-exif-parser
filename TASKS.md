@@ -6,13 +6,18 @@
  - [x] Write unit tests for a single IFD section
  - [_] Write code to iterate over all IFD sections
  	mostly done, just need to handle tags that describe offsets to other IFDs
- - [ ] Give every container an `iter()` method instead of directly containing
+ - [x] Give every container an `iter()` method instead of directly containing
         iterators. This way we don't need to be able to mutate the tag just to
         iterate them. This is also a guideline for rust libraries. This is
         a problem detected in the task above, because reading the tag for getting
         the offset gives the same problem. You'd either have to own and move the
         tag back and forth, or borrow the tag mutubly, but then you couldn't iterate
         it a second time.
+
+        I only did this for ComponentIterator for two reasons. It's the only place
+        where we really need it be able to get the offsets to other IFD sections. Also,
+        it's the only place where re-iterating the collection doesn't mean reparsing.
+        I like the idea that reparsing means calling parse again and is explicit.
  - [ ] Write unit tests for all IFD sections
  - [ ] add step to map RawExifTag -> ExifTag
  	tag_type as enum with tag names
