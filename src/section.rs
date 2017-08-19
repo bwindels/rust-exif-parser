@@ -73,7 +73,7 @@ mod tests {
       0u8, 209u8,//tag
       0u8, 4u8, //uint
       0u8, 0u8, 0u8, 1u8, //1 values
-      0u8, 0u8, 0u8, 130u8, //ABCD
+      0u8, 0u8, 0u8, 130u8, //130
       //second tag
       0u8, 210u8,//tag
       0u8, 4u8, //uint
