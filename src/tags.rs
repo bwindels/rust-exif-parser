@@ -12,7 +12,8 @@ use ::cursor::{
 };
 use ::tag::{
   RawExifTag,
-  ExifVariant
+  ExifVariant,
+  EXIF_TAG_SIZE
 };
 
 pub struct SectionOffsetIterator {
@@ -139,6 +140,23 @@ fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator,
   }
 }
 
+/** The IFD1 offset does not come in a tag,
+    but as an offset right after the IFD0 section.
+    This function  */
+fn update_offset_iter_with_idf1<'a>(offset_iter: &mut SectionOffsetIterator,
+  ifd0_tag_count: usize, tiff_cursor: Cursor<'a>) {
+
+  let offset = ifd0_tag_count * EXIF_TAG_SIZE;
+
+  if let Some(mut ifd1_offset_cursor) = tiff_cursor.with_skip(offset) {
+    if let Some(ifd1_offset) = ifd1_offset_cursor.read_num::<u32>() {
+      if ifd1_offset != 0 {
+        offset_iter.set_ifd1_offset(ifd1_offset);
+      }
+    }
+  }
+}
+
 impl<'a> Iterator for ExifTagIterator<'a> {
 
   type Item = ParseResult<(RawExifTag<'a>, Section)>;
@@ -156,8 +174,15 @@ impl<'a> Iterator for ExifTagIterator<'a> {
           //include the section enum value in the result,
           //because tag numbers are only unique inside a section
           let tag_with_section_id = tag.map(|t| (t, *id) );
-          //return the tag
+
           return Some(tag_with_section_id);
+        }
+        //handle IFD1 offset just after IFD0 section
+        else if *id == Section::IFD0 {
+          update_offset_iter_with_idf1(
+            &mut self.section_offsets,
+            section_it.len(),
+            self.tiff_marker);
         }
       }
       //if we got here (either current section came to end,
@@ -234,6 +259,7 @@ mod tests {
   fn test_read_exif_header() {
     let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
     assert!(read_exif_header(cursor).is_err());
+
 
     let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
     let cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");

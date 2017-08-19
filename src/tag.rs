@@ -1,5 +1,5 @@
 use ::cursor::{Cursor};
-use ::component::{TagComponents, ComponentIterator};
+use ::component::TagComponents;
 use ::error::{ParseError, ParseResult};
 
 pub const EXIF_TAG_SIZE : usize = 2 + 2 + 4 + 4;

@@ -201,16 +201,20 @@ impl<'a> Cursor<'a> {
     self.read_str(length).ok_or(ParseError::UnexpectedEOF)
   }
 
-  pub fn with_skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
+  pub fn with_skip(&self, offset: usize) -> Option<Cursor<'a>> {
     if self.data.len() >= offset {
-      Ok(Cursor {
+      Some(Cursor {
         data: &self.data[offset ..],
         endianness: self.endianness
       })
     }
     else {
-      Err(ParseError::UnexpectedEOF)
+      None
     }
+  }
+
+  pub fn with_skip_or_fail(&self, offset: usize) -> ParseResult<Cursor<'a>> {
+    self.with_skip(offset).ok_or(ParseError::UnexpectedEOF)
   }
 
   pub fn with_max_len(&self, max_len: usize) -> Cursor<'a> {

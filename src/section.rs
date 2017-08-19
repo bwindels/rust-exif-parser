@@ -16,8 +16,8 @@ pub struct SectionIterator<'a> {
 
 impl<'a> SectionIterator<'a> {
 
-  pub fn byte_size(&self) -> usize {
-    EXIF_TAG_SIZE * self.len as usize
+  pub fn len(&self) -> usize {
+    self.len as usize
   }
 
 } 
