@@ -106,6 +106,16 @@ impl<'a> ExifTagIterator<'a> {
 
 }
 
+<<<<<<< Updated upstream
+=======
+/** get the offset from a tag meant to contain the offset to another IFD */
+fn offset_from_tag<'a>(tag: &RawExifTag<'a>) -> Option<u32> {
+  match tag.value {
+    ExifVariant::UInt(ref components) => components.iter().nth(0),
+    _ => None
+  }
+}
+>>>>>>> Stashed changes
 
 fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator, tag: &RawExifTag<'a>) {
   match tag.tag_type {
@@ -120,19 +130,24 @@ impl<'a> Iterator for ExifTagIterator<'a> {
 
   fn next(&mut self) -> Option<Self::Item> {
     loop {
+      //if currently going through a section ...
       if let Some((ref mut section_it, ref id)) = self.current_section {
+        //if this section still has tags in it ...
         if let Some(tag) = section_it.next() {
-
+          //see if the tag contains an offset to another IFD
           if let Ok(ref t) = tag {
             update_offset_iter(&mut self.section_offsets, t);
           }
-
+          //include the section enum value in the result,
+          //because tag numbers are only unique inside a section
           let tag_with_section_id = tag.map(|t| (t, *id) );
-
+          //return the tag
           return Some(tag_with_section_id);
         }
       }
-
+      //if we got here (either current section came to end,
+      //or we haven't entered first section yet),
+      //we try to go into a new section
       match self.section_offsets.next() {
         None => return None,
         Some((offset, id)) => {
