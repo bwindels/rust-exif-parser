@@ -29,22 +29,36 @@ impl<T> ExifValueReader for T where T: ByteSwappable {
   }
 }
 
-pub struct ComponentIterator<'a, T> {
-  value_cursor: Cursor<'a>,
+pub struct TagComponents<'a, T> {
+  cursor: Cursor<'a>,
   len: u32,
-  i: u32,
   phantom_data: PhantomData<T>
 }
 
-impl<'a, T: ExifValueReader + Copy + Sized> ComponentIterator<'a, T> {
-  pub fn new(cursor: Cursor<'a>, len: u32) -> ComponentIterator<'a, T> {
-    ComponentIterator {
-      value_cursor: cursor,
+impl<'a, T: ExifValueReader + Copy + Sized> TagComponents<'a, T> {
+  pub fn new(cursor: Cursor<'a>, len: u32) -> TagComponents<'a, T> {
+    TagComponents {
+      cursor: cursor,
       len: len,
+      phantom_data: PhantomData
+    }
+  }
+
+  pub fn iter(&self) -> ComponentIterator<'a, T> {
+    ComponentIterator {
+      value_cursor: self.cursor,
+      len: self.len,
       i: 0,
       phantom_data: PhantomData
     }
   }
+}
+
+pub struct ComponentIterator<'a, T> {
+  i: u32,
+  value_cursor: Cursor<'a>,
+  len: u32,
+  phantom_data: PhantomData<T>
 }
 
 impl<'a, T: ExifValueReader + Copy + Sized> Iterator for ComponentIterator<'a, T> {

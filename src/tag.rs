@@ -1,5 +1,5 @@
 use ::cursor::{Cursor};
-use ::component::ComponentIterator;
+use ::component::{TagComponents, ComponentIterator};
 use ::error::{ParseError, ParseResult};
 
 pub const EXIF_TAG_SIZE : usize = 2 + 2 + 4 + 4;
@@ -7,15 +7,15 @@ pub const EXIF_TAG_SIZE : usize = 2 + 2 + 4 + 4;
 pub enum ExifVariant<'a> {
   Text(&'a str),
   Bytes(&'a [u8]),
-  SignedByte(ComponentIterator<'a, i8>),
-  UShort(ComponentIterator<'a, u16>),
-  UInt(ComponentIterator<'a, u32>),
-  UIntFraction(ComponentIterator<'a, (u32, u32)>),
-  Short(ComponentIterator<'a, i16>),
-  Int(ComponentIterator<'a, i32>),
-  IntFraction(ComponentIterator<'a, (i32, i32)>),
-  Float(ComponentIterator<'a, f32>),
-  Double(ComponentIterator<'a, f64>)
+  SignedByte(TagComponents<'a, i8>),
+  UShort(TagComponents<'a, u16>),
+  UInt(TagComponents<'a, u32>),
+  UIntFraction(TagComponents<'a, (u32, u32)>),
+  Short(TagComponents<'a, i16>),
+  Int(TagComponents<'a, i32>),
+  IntFraction(TagComponents<'a, (i32, i32)>),
+  Float(TagComponents<'a, f32>),
+  Double(TagComponents<'a, f64>)
 }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -82,23 +82,23 @@ impl ExifFormat {
       ExifFormat::Text =>
       ExifVariant::Text(value_cursor.read_str_or_fail(len as usize)?),
       ExifFormat::UShort =>
-      ExifVariant::UShort(ComponentIterator::<u16>::new(value_cursor, len)),
+      ExifVariant::UShort(TagComponents::<u16>::new(value_cursor, len)),
       ExifFormat::UInt =>
-      ExifVariant::UInt(ComponentIterator::<u32>::new(value_cursor, len)),
+      ExifVariant::UInt(TagComponents::<u32>::new(value_cursor, len)),
       ExifFormat::UIntFraction =>
-      ExifVariant::UIntFraction(ComponentIterator::<(u32, u32)>::new(value_cursor, len)),
+      ExifVariant::UIntFraction(TagComponents::<(u32, u32)>::new(value_cursor, len)),
       ExifFormat::SignedByte =>
-      ExifVariant::SignedByte(ComponentIterator::<i8>::new(value_cursor, len)),
+      ExifVariant::SignedByte(TagComponents::<i8>::new(value_cursor, len)),
       ExifFormat::Short =>
-      ExifVariant::Short(ComponentIterator::<i16>::new(value_cursor, len)),
+      ExifVariant::Short(TagComponents::<i16>::new(value_cursor, len)),
       ExifFormat::Int =>
-      ExifVariant::Int(ComponentIterator::<i32>::new(value_cursor, len)),
+      ExifVariant::Int(TagComponents::<i32>::new(value_cursor, len)),
       ExifFormat::IntFraction =>
-      ExifVariant::IntFraction(ComponentIterator::<(i32, i32)>::new(value_cursor, len)),
+      ExifVariant::IntFraction(TagComponents::<(i32, i32)>::new(value_cursor, len)),
       ExifFormat::Float =>
-      ExifVariant::Float(ComponentIterator::<f32>::new(value_cursor, len)),
+      ExifVariant::Float(TagComponents::<f32>::new(value_cursor, len)),
       ExifFormat::Double =>
-      ExifVariant::Double(ComponentIterator::<f64>::new(value_cursor, len))
+      ExifVariant::Double(TagComponents::<f64>::new(value_cursor, len))
     };
     Ok(variant)
   }
@@ -171,7 +171,8 @@ mod tests {
     assert_eq!(tag.tag_type, 200);
     assert_eq!(tag.format, ExifFormat::UInt);
     match tag.value {
-      ExifVariant::UInt(mut it) => {
+      ExifVariant::UInt(ref components) => {
+        let mut it = components.iter();
         assert_eq!(it.next().expect("first value in iterator should be ok"), 240);
         assert!(it.next().is_none());
       },
@@ -220,7 +221,8 @@ mod tests {
     assert_eq!(tag.tag_type, 210);
     assert_eq!(tag.format, ExifFormat::UInt);
     match tag.value {
-      ExifVariant::UInt(mut it) => {
+      ExifVariant::UInt(ref components) => {
+        let mut it = components.iter();
         assert_eq!(it.next().expect("first value in iterator should be ok"), 120);
         assert_eq!(it.next().expect("second value in iterator should be ok"), 160);
         assert!(it.next().is_none(), "there should only be 2 values");
