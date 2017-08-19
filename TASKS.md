@@ -4,7 +4,7 @@
  - [x] Write unit test for EXIF value parsing
  - [x] Write code to iterate over a single IFD section
  - [x] Write unit tests for a single IFD section
- - [_] Write code to iterate over all IFD sections
+ - [x] Write code to iterate over all IFD sections
  	mostly done, just need to handle tags that describe offsets to other IFDs
  - [x] Give every container an `iter()` method instead of directly containing
         iterators. This way we don't need to be able to mutate the tag just to
