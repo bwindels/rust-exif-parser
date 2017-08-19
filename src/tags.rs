@@ -17,7 +17,7 @@ use ::tag::{
 };
 
 pub struct SectionOffsetIterator {
-  has_consumed_ifd0: bool,
+  ifd0_offset: Option<u32>,
   ifd1_offset: Option<u32>,
   gps_offset: Option<u32>,
   sub_ifd_offset: Option<u32>,
@@ -26,10 +26,9 @@ pub struct SectionOffsetIterator {
 
 impl SectionOffsetIterator {
 
-  pub fn new() -> SectionOffsetIterator {
+  pub fn new(ifd0_offset: u32) -> SectionOffsetIterator {
     SectionOffsetIterator {
-      has_consumed_ifd0: false,
-      //TODO: cleanup the 4 ... //Some(ifd0_length + 4u32)
+      ifd0_offset: Some(ifd0_offset),
       ifd1_offset: None,
       gps_offset: None,
       sub_ifd_offset: None,
@@ -59,9 +58,9 @@ impl Iterator for SectionOffsetIterator {
   type Item = (u32, Section);
 
   fn next(&mut self) -> Option<Self::Item> {
-    if !self.has_consumed_ifd0 {
-      self.has_consumed_ifd0 = true;
-      return Some((0, Section::IFD0));
+    if let Some(offset) = self.ifd0_offset {
+      self.ifd0_offset = None;
+      return Some((offset, Section::IFD0));
     }
     if let Some(offset) = self.ifd1_offset {
       self.ifd1_offset = None;
@@ -95,9 +94,9 @@ pub struct ExifTagIterator<'a> {
 
 impl<'a> ExifTagIterator<'a> {
 
-  pub fn new(tiff_marker: Cursor<'a>) -> ExifTagIterator<'a> {
+  pub fn new(tiff_marker: Cursor<'a>, ifd0_offset: u32) -> ExifTagIterator<'a> {
     ExifTagIterator {
-      section_offsets: SectionOffsetIterator::new(),
+      section_offsets: SectionOffsetIterator::new(ifd0_offset),
       current_section: None,
       tiff_marker: tiff_marker
     }
@@ -214,7 +213,8 @@ pub enum Section {
 
 pub fn read_tags<'a>(app1_cursor: Cursor<'a>) -> ParseResult<ExifTagIterator<'a>> {
   let tiff_marker = read_exif_header(app1_cursor)?;
-  Ok(ExifTagIterator::new(tiff_marker))
+  let ifd0_offset : u32 = tiff_marker.clone().read_num_or_fail()?;
+  Ok(ExifTagIterator::new(tiff_marker, ifd0_offset))
 }
 
 
