@@ -10,8 +10,8 @@ use ::tag::{
 pub struct SectionIterator<'a> {
 	cursor: Cursor<'a>,
   tiff_marker: Cursor<'a>,
-  len: u32,
-  i: u32
+  len: u16,
+  i: u16
 }
 
 impl<'a> SectionIterator<'a> {
@@ -51,7 +51,7 @@ impl<'a> Iterator for SectionIterator<'a> {
 }
 
 pub fn read_section<'a>(mut cursor: Cursor<'a>, tiff_marker: Cursor<'a>) -> ParseResult<SectionIterator<'a>> {
-	let len : u32 = cursor.read_num_or_fail()?;
+	let len : u16 = cursor.read_num_or_fail()?;
   Ok(SectionIterator {
     cursor: cursor,
     tiff_marker: tiff_marker,
@@ -68,7 +68,7 @@ mod tests {
   #[test]
   fn read_simple_section() {
     const EXIF_SECTION : &'static [u8] = &[
-      0u8, 0u8, 0u8, 2u8, //2 tags in this section
+      0u8, 2u8, //2 tags in this section
       //first tag
       0u8, 209u8,//tag
       0u8, 4u8, //uint
