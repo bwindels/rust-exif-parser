@@ -227,21 +227,25 @@ fn read_exif_header<'a>(mut app1_cursor: Cursor<'a>) -> ParseResult<Cursor<'a>> 
     return Err(ParseError::InvalidExifHeader{ header: header_array });
   }
 
+  let tiff_cursor = app1_cursor.clone();
   let tiff_header : u16 = app1_cursor.read_num_or_fail()?;
 
-  let tiff_cursor = match tiff_header {
-    0x4949 => app1_cursor.with_endianness(Endianness::Little),
-    0x4D4D => app1_cursor.with_endianness(Endianness::Big),
-    _ => return Err(ParseError::InvalidTiffHeader{ header: tiff_header })
+  let app1_cursor = match tiff_header {
+    0x4949 => Ok(app1_cursor.with_endianness(Endianness::Little)),
+    0x4D4D => Ok(app1_cursor.with_endianness(Endianness::Big)),
+    _ => Err(ParseError::InvalidTiffHeader{ header: tiff_header })
   };
+  let mut app1_cursor = app1_cursor?;
 
   //this is a marker in the data to check
-  //the endianess has been properly detected
+  //the endianness has been properly detected
   //if not you'd read 0x2A00
-  let tiff_data_marker : u16 = tiff_cursor.clone().read_num_or_fail()?;
+  let tiff_data_marker : u16 = app1_cursor.read_num_or_fail()?;
   if tiff_data_marker != 0x002A {
     return Err(ParseError::InvalidTiffData{ data: tiff_data_marker });
   }
+
+  let tiff_cursor = tiff_cursor.with_endianness(app1_cursor.endianness());
 
   return Ok(tiff_cursor);
 }
@@ -263,8 +267,11 @@ mod tests {
 
     let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
     let cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
-    let mut tiff_cursor = read_exif_header(cursor).unwrap();
-    assert_eq!(tiff_cursor.read_num::<u16>(), Some(0x002A) );
+    let tiff_cursor = read_exif_header(cursor).unwrap();
+    let tiff_data = tiff_cursor
+      .with_skip_or_fail(2).unwrap()  //skip tiff header
+      .read_num::<u16>();
+    assert_eq!(tiff_data, Some(0x002A) );
   }
 
 }
