@@ -154,7 +154,7 @@ impl<'a> Cursor<'a> {
     self.read_num().ok_or(ParseError::UnexpectedEOF)
   }
 
-  pub fn with_endianness(&mut self, end: Endianness) -> Cursor<'a> {
+  pub fn with_endianness(&self, end: Endianness) -> Cursor<'a> {
     Cursor {
       data: self.data,
       endianness: end
