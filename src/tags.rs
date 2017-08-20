@@ -12,8 +12,7 @@ use ::cursor::{
 };
 use ::tag::{
   RawExifTag,
-  ExifVariant,
-  EXIF_TAG_SIZE
+  ExifVariant
 };
 
 pub struct SectionOffsetIterator {
@@ -88,7 +87,7 @@ impl Iterator for SectionOffsetIterator {
 
 pub struct ExifTagIterator<'a> {
   section_offsets: SectionOffsetIterator,
-  current_section: Option<(SectionIterator<'a>, Section)>,
+  current_section: Option<(SectionIterator<'a>, (u32, Section))>,
   tiff_marker: Cursor<'a>
 }
 
@@ -140,14 +139,19 @@ fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator,
 }
 
 /** The IFD1 offset does not come in a tag,
-    but as an offset right after the IFD0 section.
-    This function  */
-fn update_offset_iter_with_idf1<'a>(offset_iter: &mut SectionOffsetIterator,
-  ifd0_tag_count: usize, tiff_cursor: Cursor<'a>) {
+    but as an offset right after the IFD0 section. */
+fn update_offset_iter_with_idf1<'a>(
+  offset_iter: &mut SectionOffsetIterator,
+  ifd0_offset: usize,
+  ifd0_size: usize,
+  tiff_cursor: Cursor<'a>
+) {
 
-  let offset = ifd0_tag_count * EXIF_TAG_SIZE;
+  //offset where to read the offset of IFD1 off,
+  //just behind IFD0
+  let ifd1_offset_offset = ifd0_offset + ifd0_size;
 
-  if let Some(mut ifd1_offset_cursor) = tiff_cursor.with_skip(offset) {
+  if let Some(mut ifd1_offset_cursor) = tiff_cursor.with_skip(ifd1_offset_offset) {
     if let Some(ifd1_offset) = ifd1_offset_cursor.read_num::<u32>() {
       if ifd1_offset != 0 {
         offset_iter.set_ifd1_offset(ifd1_offset);
@@ -163,24 +167,25 @@ impl<'a> Iterator for ExifTagIterator<'a> {
   fn next(&mut self) -> Option<Self::Item> {
     loop {
       //if currently going through a section ...
-      if let Some((ref mut section_it, ref id)) = self.current_section {
+      if let Some((ref mut section_it, (offset, id))) = self.current_section {
         //if this section still has tags in it ...
         if let Some(tag) = section_it.next() {
           //see if the tag contains an offset to another IFD
           if let Ok(ref t) = tag {
-            update_offset_iter(&mut self.section_offsets, *id, t);
+            update_offset_iter(&mut self.section_offsets, id, t);
           }
           //include the section enum value in the result,
           //because tag numbers are only unique inside a section
-          let tag_with_section_id = tag.map(|t| (t, *id) );
+          let tag_with_section_id = tag.map(|t| (t, id) );
 
           return Some(tag_with_section_id);
         }
         //handle IFD1 offset just after IFD0 section
-        else if *id == Section::IFD0 {
+        else if id == Section::IFD0 {
           update_offset_iter_with_idf1(
             &mut self.section_offsets,
-            section_it.len(),
+            offset as usize,
+            section_it.byte_size(),
             self.tiff_marker);
         }
       }
@@ -192,8 +197,10 @@ impl<'a> Iterator for ExifTagIterator<'a> {
         Some((offset, id)) => {
           let section = self.open_section(offset);
           match section {
-            Ok(section_it) => self.current_section = Some( (section_it, id) ),
-            Err(e) => return Some(Err(e))
+            Ok(section_it) =>
+              self.current_section = Some( (section_it, (offset, id)) ),
+            Err(e) =>
+              return Some(Err(e))
           };
         }
       }
