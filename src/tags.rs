@@ -213,7 +213,9 @@ pub enum Section {
 
 pub fn read_tags<'a>(app1_cursor: Cursor<'a>) -> ParseResult<ExifTagIterator<'a>> {
   let tiff_marker = read_exif_header(app1_cursor)?;
-  let ifd0_offset : u32 = tiff_marker.clone().read_num_or_fail()?;
+  let ifd0_offset : u32 = tiff_marker.clone()
+    .with_skip_or_fail(2 + 2)?  //skip tiff header and tiff data
+    .read_num_or_fail()?;
   Ok(ExifTagIterator::new(tiff_marker, ifd0_offset))
 }
 
