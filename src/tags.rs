@@ -209,7 +209,7 @@ impl<'a> Iterator for ExifTagIterator<'a> {
 
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Section {
   IFD0,
   IFD1,
@@ -265,7 +265,8 @@ mod tests {
   use ::cursor::{Cursor, Endianness};
   use ::test_fixtures::{JPEG_SAMPLE, JPEG_SAMPLE_EXIF_OFFSET};
   use super::{
-    read_exif_header
+    read_exif_header,
+    read_tags
   };
 
   #[test]
@@ -281,6 +282,25 @@ mod tests {
       .with_skip_or_fail(2).unwrap()  //skip tiff header
       .read_num::<u16>();
     assert_eq!(tiff_data, Some(0x002A) );
+  }
+
+  #[test]
+  fn test_read_tags() {
+    let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
+    let cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
+    let tags_it = read_tags(cursor).unwrap();
+    let mut count : u32 = 0;
+    for result in tags_it {
+      match result {
+        Ok( (tag, section) ) => {
+          count += 1;
+        },
+        Err( err ) => {
+          panic!("error");
+        }
+      }
+    }
+    assert_eq(count, 31);
   }
 
 }
