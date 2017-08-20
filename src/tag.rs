@@ -114,10 +114,14 @@ pub fn read_exif_tag<'a>(mut cursor: Cursor<'a>, tiff_cursor: Cursor<'a>) -> Par
   let tag_type : u16 = cursor.read_num_or_fail()?;
   let format_num : u16 = cursor.read_num_or_fail()?;
   let components : u32 = cursor.read_num_or_fail()?;
+
   let format = ExifFormat::from(format_num)?;
   let total_values_bytes = format.bytes_per_component() * components as usize;
 
   let value_cursor = if total_values_bytes > 4 {
+    //TODO: have an option to be more forgiving about EOF
+    //here since this will inhibit us from discovering
+    //the tags to come with embedded values.
     let tiff_offset : u32 = cursor.read_num_or_fail()?;
     tiff_cursor.with_skip_or_fail(tiff_offset as usize)?
   } else {

@@ -300,7 +300,7 @@ mod tests {
         }
       }
     }
-    assert_eq(count, 31);
+    assert_eq!(count, 31);
   }
 
 }
