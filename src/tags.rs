@@ -121,7 +121,7 @@ fn offset_from_tag<'a>(tag: &RawExifTag<'a>) -> Option<u32> {
 fn update_offset_iter<'a>(offset_iter: &mut SectionOffsetIterator,
                           section_id: Section, tag: &RawExifTag<'a>) {
 
-  match (section_id, tag.tag_type) {
+  match (section_id, tag.no) {
     (Section::IFD0, 0x8825) =>
       if let Some(offset) = offset_from_tag(&tag) {
         offset_iter.set_gps_offset(offset)

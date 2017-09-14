@@ -105,13 +105,13 @@ impl ExifFormat {
 }
 
 pub struct RawExifTag<'a> {
-  pub tag_type: u16,
+  pub no: u16,
   pub format: ExifFormat,
   pub value: ExifVariant<'a>
 }
 
 pub fn read_exif_tag<'a>(mut cursor: Cursor<'a>, tiff_cursor: Cursor<'a>) -> ParseResult<RawExifTag<'a>> {
-  let tag_type : u16 = cursor.read_num_or_fail()?;
+  let tag_number : u16 = cursor.read_num_or_fail()?;
   let format_num : u16 = cursor.read_num_or_fail()?;
   let components : u32 = cursor.read_num_or_fail()?;
 
@@ -140,7 +140,7 @@ pub fn read_exif_tag<'a>(mut cursor: Cursor<'a>, tiff_cursor: Cursor<'a>) -> Par
     value_cursor, components)?;
 
   let tag = RawExifTag {
-    tag_type: tag_type,
+    no: tag_number,
     format: format,
     value: variant
   };
@@ -172,7 +172,7 @@ mod tests {
     let tag = read_exif_tag(cursor,
       Cursor::new(EXIF_POINTER_AREA, Endianness::Big));
     let tag = tag.expect("tag should be ok");
-    assert_eq!(tag.tag_type, 200);
+    assert_eq!(tag.no, 200);
     assert_eq!(tag.format, ExifFormat::UInt);
     match tag.value {
       ExifVariant::UInt(ref components) => {
@@ -197,7 +197,7 @@ mod tests {
     let data_cursor = Cursor::new(EXIF_POINTER_AREA, Endianness::Big);
     let tag = read_exif_tag(cursor, data_cursor)
       .expect("read should not fail");
-    assert_eq!(tag.tag_type, 210);
+    assert_eq!(tag.no, 210);
     assert_eq!(tag.format, ExifFormat::Text);
     match tag.value {
       ExifVariant::Text(text) => assert_eq!(text, "ABC"),
@@ -222,7 +222,7 @@ mod tests {
     let tag = read_exif_tag(cursor,
       Cursor::new(EXIF_POINTER_AREA, Endianness::Big));
     let tag = tag.expect("tag should be ok");
-    assert_eq!(tag.tag_type, 210);
+    assert_eq!(tag.no, 210);
     assert_eq!(tag.format, ExifFormat::UInt);
     match tag.value {
       ExifVariant::UInt(ref components) => {

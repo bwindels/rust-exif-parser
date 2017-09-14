@@ -88,11 +88,11 @@ mod tests {
     let first_tag = section.next()
       .expect("first value should be some")
       .expect("first tag should be ok");
-    assert_eq!(first_tag.tag_type, 209);
+    assert_eq!(first_tag.no, 209);
     let second_tag = section.next()
       .expect("second value should be some")
       .expect("second tag should be ok");
-    assert_eq!(second_tag.tag_type, 210);
+    assert_eq!(second_tag.no, 210);
     assert!(section.next().is_none(), "section only contains 2 tags");
   }
 }
