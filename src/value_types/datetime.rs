@@ -12,9 +12,6 @@ pub struct DateTime {
 impl DateTime {
 	//parses a date in format `2013:05:10 15:21:35`
 	fn parse(date_str: & str) -> Option<DateTime> {
-		if date_str.len() < 19 {
-			return None;
-		}
 		let year_str = date_str.get(0 .. 4);
 		let month_str = date_str.get(5 .. 7);
 		let day_str = date_str.get(8 .. 10);
