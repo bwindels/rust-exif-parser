@@ -266,8 +266,11 @@ mod tests {
   use ::test_fixtures::{JPEG_SAMPLE, JPEG_SAMPLE_EXIF_OFFSET};
   use super::{
     read_exif_header,
-    read_tags
+    read_tags,
+    Section
   };
+
+  use ::tag::{ExifVariant};
 
   #[test]
   fn test_read_exif_header() {
@@ -289,18 +292,32 @@ mod tests {
     let cursor = Cursor::new(JPEG_SAMPLE, Endianness::Little);
     let cursor = cursor.with_skip_or_fail(JPEG_SAMPLE_EXIF_OFFSET).expect("EOF");
     let tags_it = read_tags(cursor).unwrap();
-    let mut count : u32 = 0;
+    let mut ifd0_count = 0u32;
+    let mut ifd1_count = 0u32;
+    let mut subifd_count = 0u32;
+    let mut gps_count = 0u32;
+    let mut interop_count = 0u32;
     for result in tags_it {
       match result {
         Ok( (tag, section) ) => {
-          count += 1;
+          match section {
+            Section::IFD0 => ifd0_count += 1,
+            Section::IFD1 => ifd1_count += 1,
+            Section::GPS => gps_count += 1,
+            Section::SubIFD => subifd_count += 1,
+            Section::InteropIFD => interop_count += 1
+          }
         },
         Err( err ) => {
           panic!("error");
         }
       }
     }
-    assert_eq!(count, 31);
+    assert_eq!(ifd0_count, 9);
+    assert_eq!(ifd1_count, 0);
+    assert_eq!(gps_count, 9);
+    assert_eq!(subifd_count, 13);
+    assert_eq!(interop_count, 0);
   }
 
 }
