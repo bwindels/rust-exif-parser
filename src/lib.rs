@@ -5,6 +5,7 @@ mod component;
 mod tag;
 mod section; 
 mod tags;
+mod value_types;
 #[cfg(test)]
 mod test_fixtures;
 
