@@ -11,7 +11,7 @@ pub struct DateTime {
 
 impl DateTime {
 	//parses a date in format `2013:05:10 15:21:35`
-	fn parse(date_str: & str) -> Option<DateTime> {
+	pub fn parse(date_str: & str) -> Option<DateTime> {
 		let year_str = date_str.get(0 .. 4);
 		let month_str = date_str.get(5 .. 7);
 		let day_str = date_str.get(8 .. 10);
