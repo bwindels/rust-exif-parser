@@ -1,3 +1,9 @@
+pub struct Thumbnail {
+	type: MimeType,
+	offset: usize,
+	length: usize,
+	buffer: Option<&'a [u8]>
+}
 
 pub struct ThumbnailCombiner<'a> {
 	tiff_cursor: Cursor<'a>,
@@ -6,7 +12,7 @@ pub struct ThumbnailCombiner<'a> {
 	thumbnail_type: Option<u8>
 }
 
-impl<'a> TagCombiner for ThumbnailCombiner<'a> {
+impl<'a> TagCombiner<Thumbnail> for ThumbnailCombiner<'a> {
 	fn add_raw_tag(&mut self, tag: &RawExifTag<'a>, section: Section) -> (bool, Option<Tag<'a>>) {
 		let tag_comsumed = match tag.no {
 			//ThumbnailOffset

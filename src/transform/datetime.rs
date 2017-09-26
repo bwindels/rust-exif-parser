@@ -41,6 +41,15 @@ impl DateTime {
 	}
 }
 
+pub fn transform_datetime<'a>(raw_tag: &RawExifTag<'a>) -> ParseResult<DateTime> {
+	if let ExifVariant::Text(ref text) = raw_tag.value {
+    DateTime::parse(text).ok_or(|| ParseError::MalFormed(&raw_tag))
+  }
+  else {
+    Err(ParseError::MalFormed(&raw_tag))
+  }
+}
+
 #[cfg(test)]
 mod tests {
 	#[test]
