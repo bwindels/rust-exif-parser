@@ -24,18 +24,12 @@ pub struct TagTransformer<'a> {
   raw_tags: ExifTagIterator<'a>
 }
 
-enum Matched<'a, T> {
-  Matched(T),
-  Unmatched(RawExifTag<'a>)
-}
-
-use self::Matched::*;
 use self::Section::*;
 
 impl<'a> TagTransformer<'a> {
 
-  fn transform_thumbnail_tags<'b: 'a>(&mut self, raw_tag: RawExifTag<'b>, section: Section) -> Matched<Option<ParseResult<Tag<'b>>>> {
-    let r = match (section, raw_tag.no) {
+  fn transform_raw_tag(&mut self, raw_tag: RawExifTag<'a>, section: Section) -> Option<ParseResult<Tag<'a>>> {
+    match (section, raw_tag.no) {
       (IFD1, 0x0201) => {
         self.thumbnail.offset = Some(raw_tag);
         option_to_tag(self.thumbnail.try_combine_tags(), |thumb| Tag::Thumbnail(thumb))
@@ -48,13 +42,6 @@ impl<'a> TagTransformer<'a> {
         self.thumbnail.compression = Some(raw_tag);
         option_to_tag(self.thumbnail.try_combine_tags(), |thumb| Tag::Thumbnail(thumb))
       },
-      _ => return Unmatched(raw_tag),
-    };
-    return Matched(r);
-  }
-
-  fn transform_gps_tags<'b: 'a>(&mut self, raw_tag: RawExifTag<'b>, section: Section) -> Matched<Option<ParseResult<Tag<'b>>>> {
-    let r = match (section, raw_tag.no) {
       (GPS, 0x0001) => {
         self.gps.latitude.reference = Some(raw_tag);
         option_to_tag(self.gps.latitude.try_combine_tags(), |lat| Tag::GPSLatitude(lat))
@@ -71,13 +58,6 @@ impl<'a> TagTransformer<'a> {
         self.gps.longitude.degrees = Some(raw_tag);
         option_to_tag(self.gps.longitude.try_combine_tags(), |lon| Tag::GPSLongitude(lon))
       },
-      _ => return Unmatched(raw_tag)
-    };
-    return Matched(r);
-  }
-
-  fn transform_date_tags<'b: 'a>(&mut self, raw_tag: RawExifTag<'b>, section: Section) -> Matched<Option<ParseResult<Tag<'b>>>> {
-    let r = match (section, raw_tag.no) {
       (SubIFD, 0x0132) => {
         Some(to_datetime(&raw_tag).map(|dt| Tag::ModifyDate(dt)))
       },
@@ -87,13 +67,6 @@ impl<'a> TagTransformer<'a> {
       (SubIFD, 0x9004) => {
         Some(to_datetime(&raw_tag).map(|dt| Tag::CreateDate(dt)))
       },
-      _ => return Unmatched(raw_tag)
-    };
-    return Matched(r);
-  }
-
-  fn transform_text_tags<'b: 'a>(&mut self, raw_tag: RawExifTag<'b>, section: Section) -> Matched<Option<ParseResult<Tag<'b>>>> {
-    let r = match (section, raw_tag.no) {
       (IFD0, 0x010e) => {
         Some(to_text(&raw_tag).map(|text| Tag::ImageDescription(text)))
       },
@@ -103,29 +76,8 @@ impl<'a> TagTransformer<'a> {
       (IFD0, 0x0110) => {
         Some(to_text(&raw_tag).map(|text| Tag::Model(text)))
       },
-      _ => return Unmatched(raw_tag)
-    };
-    return Matched(r);
-  }
-
-  fn transform_raw_tag<'b: 'a>(&mut self, raw_tag: RawExifTag<'b>, section: Section) -> Option<ParseResult<Tag<'b>>> {
-    let raw_tag = match self.transform_gps_tags(raw_tag, section) {
-      Matched(tag_option) => return tag_option,
-      Unmatched(raw_tag) => raw_tag
-    };
-    let raw_tag = match self.transform_thumbnail_tags(raw_tag, section) {
-      Matched(tag_option) => return tag_option,
-      Unmatched(raw_tag) => raw_tag
-    };
-    let raw_tag = match self.transform_date_tags(raw_tag, section) {
-      Matched(tag_option) => return tag_option,
-      Unmatched(raw_tag) => raw_tag
-    };
-    let raw_tag = match self.transform_text_tags(raw_tag, section) {
-      Matched(tag_option) => return tag_option,
-      Unmatched(raw_tag) => raw_tag
-    };
-    return Some(Ok(Tag::Other(raw_tag)));
+      _ => Some(Ok(Tag::Other(raw_tag)))
+    }
   }
 }
 
@@ -133,6 +85,16 @@ impl<'a> Iterator for TagTransformer<'a> {
   type Item = ParseResult<Tag<'a>>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    None
+    while let Some(raw_tag_result) = self.raw_tags.next() {
+      match raw_tag_result {
+        Ok((raw_tag, section)) => {
+          if let Some(tag_result) = self.transform_raw_tag(raw_tag, section) {
+            return Some(tag_result);
+          }
+        },
+        Err(err) => return Some(Err(err))
+      }
+    }
+    return None;
   }
 }
