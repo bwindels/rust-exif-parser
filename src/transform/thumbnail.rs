@@ -2,13 +2,27 @@ use cursor::Cursor;
 use tag::RawExifTag;
 use super::TagCombiner;
 use error::ParseResult;
+use super::number::{to_u32, to_u16};
 
-pub enum MimeType {}
+pub enum MimeType {
+  Jpeg,
+  Tiff,
+  Unknown
+}
+
+fn parse_compression(raw_tag: &RawExifTag) -> ParseResult<MimeType> {
+  to_u16(raw_tag).map(|n| {
+    match n {
+      6 => MimeType::Jpeg,
+      _ => MimeType::Unknown
+    }
+  })
+}
 
 pub struct ThumbnailInfo {
   mimetype: MimeType,
-  offset: usize,
-  length: usize,
+  offset: u32,
+  length: u32,
 }
 
 pub struct ThumbnailCombiner<'a> {
@@ -18,42 +32,34 @@ pub struct ThumbnailCombiner<'a> {
   pub compression: Option<RawExifTag<'a>>
 }
 
-
 impl<'a> TagCombiner<ThumbnailInfo> for ThumbnailCombiner<'a> {
   fn try_combine_tags(&self) -> Option<ParseResult<ThumbnailInfo>> {
-    None
-  }
-  /*
-  fn add_raw_tag(&mut self, tag: &RawExifTag<'a>, section: Section) -> (bool, Option<Tag<'a>>) {
-    let tag_comsumed = match tag.no {
-      //ThumbnailOffset
-      0x0201 => {
-        self.thumbnail_offset = Some();
-        true
-      },
-      //ThumbnailLength
-      0x0202 => {
-        self.thumbnail_len = Some();
-        true
-      },
-      //Compression
-      //TODO: is this specific to the thumbnail only?
-      0x0103 => {
-        self.thumbnail_type = Some();
-        true
-      }
-      _ => false
-    };
-    if let (Some(offset), Some(len)) = (self.thumbnail_offset, self.thumbnail_len) {
-      if let Some(thumbnail_cursor) = self.tiff_cursor.with_skip(offset) {
-        if let Some(buffer) = thumbnail_cursor.read_bytes(len) {
-          return (tag_comsumed, Some(Tag::Thumbnail(buffer))));
+    if let (&Some(ref offset_tag), &Some(ref length_tag), &Some(ref compression_tag)) =
+      (&self.offset, &self.length, &self.compression)
+    {
+      let offset = to_u32(&offset_tag);
+      let length = to_u32(&length_tag);
+      let mimetype = parse_compression(&compression_tag);
+
+      match (offset, length, mimetype) {
+        (Ok(offset), Ok(length), Ok(mimetype)) => {
+          Some(Ok(ThumbnailInfo {
+            length: length,
+            offset: offset,
+            mimetype: mimetype
+          }))
+        },
+        (Err(err), _, _) |
+        (Ok(_), Err(err), _) |
+        (Ok(_), Ok(_), Err(err)) => {
+          Some(Err(err))
         }
       }
     }
-    return (tag_comsumed, None);
+    else {
+      None
+    }
   }
-  */
 }
 
 
