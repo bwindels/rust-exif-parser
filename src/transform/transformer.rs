@@ -22,6 +22,14 @@ use self::Section::*;
 
 impl<'a> TagTransformer<'a> {
 
+  pub fn new(raw_tags: ExifTagIterator<'a>) -> TagTransformer<'a> {
+    TagTransformer {
+      gps_position: GpsPositionCombiner::new(),
+      thumbnail: ThumbnailCombiner::new(),
+      raw_tags: raw_tags
+    }
+  }
+
   fn transform_raw_tag(&mut self, raw_tag: RawExifTag<'a>, section: Section) -> Option<ParseResult<Tag<'a>>> {
     match (section, raw_tag.no) {
       (IFD1, 0x0201) => {

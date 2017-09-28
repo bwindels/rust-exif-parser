@@ -26,10 +26,19 @@ pub struct ThumbnailInfo {
 }
 
 pub struct ThumbnailCombiner<'a> {
-  tiff_cursor: Cursor<'a>,
   pub offset: Option<RawExifTag<'a>>,
   pub length: Option<RawExifTag<'a>>,
   pub compression: Option<RawExifTag<'a>>
+}
+
+impl<'a> ThumbnailCombiner<'a> {
+  pub fn new() -> ThumbnailCombiner<'a> {
+    ThumbnailCombiner {
+      offset: None,
+      length: None,
+      compression: None
+    }
+  }
 }
 
 impl<'a> TagCombiner<ThumbnailInfo> for ThumbnailCombiner<'a> {
