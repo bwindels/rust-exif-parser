@@ -2,7 +2,7 @@ use error::ParseResult;
 
 mod datetime;
 mod text;
-mod gps_degree;
+mod gps;
 mod transformer;
 mod tag;
 mod thumbnail;

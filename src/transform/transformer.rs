@@ -1,12 +1,12 @@
-use tags::{Section, ExifTagIterator};
-use tag::RawExifTag;
-use super::gps_degree::GpsPositionCombiner;
+use super::tag::Tag;
 use super::TagCombiner;
+use super::thumbnail::ThumbnailCombiner;
+use super::gps::GpsPositionCombiner;
 use super::datetime::to_datetime;
 use super::text::to_text;
-use super::thumbnail::ThumbnailCombiner;
+use tags::{Section, ExifTagIterator};
+use tag::RawExifTag;
 use error::ParseResult;
-use super::tag::Tag;
 
 fn option_to_tag<'a, T, F>(option: Option<ParseResult<T>>, map: F) -> Option<ParseResult<Tag<'a>>> where F: FnOnce(T) -> Tag<'a> {
   option.map(|r| r.map(map))

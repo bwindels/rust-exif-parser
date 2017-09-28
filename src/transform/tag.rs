@@ -1,6 +1,6 @@
 use super::datetime::DateTime;
 use super::thumbnail::ThumbnailInfo;
-use super::gps_degree::GpsPosition;
+use super::gps::GpsPosition;
 use tag::RawExifTag;
 
 pub enum Tag<'a> {
