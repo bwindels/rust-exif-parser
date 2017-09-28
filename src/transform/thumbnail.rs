@@ -1,8 +1,7 @@
-use cursor::Cursor;
 use tag::RawExifTag;
 use super::TagCombiner;
 use error::ParseResult;
-use super::number::{to_u32, to_u16};
+use super::primitive::{to_u32, to_u16};
 
 pub enum MimeType {
   Jpeg,

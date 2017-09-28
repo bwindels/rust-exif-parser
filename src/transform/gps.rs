@@ -2,7 +2,7 @@ use component::ComponentIterator;
 use error::{ParseResult, ParseError};
 use tag::{RawExifTag, ExifVariant};
 use super::TagCombiner;
-use super::text::to_text;
+use super::primitive::to_text;
 use component::ExifValueReader;
 
 fn collect_slice<'a, T>(slice: &mut [T], mut it: ComponentIterator<'a, T>) -> ParseResult<()> where T: Copy + ExifValueReader {

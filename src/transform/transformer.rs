@@ -3,7 +3,7 @@ use super::TagCombiner;
 use super::thumbnail::ThumbnailCombiner;
 use super::gps::GpsPositionCombiner;
 use super::datetime::to_datetime;
-use super::text::to_text;
+use super::primitive::to_text;
 use tags::{Section, ExifTagIterator};
 use tag::RawExifTag;
 use error::ParseResult;

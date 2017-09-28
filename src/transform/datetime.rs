@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use tag::RawExifTag;
 use error::{ParseError, ParseResult};
-use super::text::to_text;
+use super::primitive::to_text;
 
 pub struct DateTime {
   year: u16,
