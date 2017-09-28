@@ -1,5 +1,6 @@
 use super::datetime::DateTime;
 use super::thumbnail::ThumbnailInfo;
+use super::gps_degree::GpsPosition;
 use tag::RawExifTag;
 
 pub enum Tag<'a> {
@@ -9,9 +10,7 @@ pub enum Tag<'a> {
   ModifyDate(DateTime),
   DateTimeOriginal(DateTime),
   CreateDate(DateTime),
-  GPSLatitude(f64),
-  GPSLongitude(f64),
+  GpsPosition(GpsPosition),
   Thumbnail(ThumbnailInfo),
-
   Other(RawExifTag<'a>)
 }

@@ -5,7 +5,7 @@ use super::TagCombiner;
 use super::text::to_text;
 use component::ExifValueReader;
 
-fn collect_slice<'a, T>(slice: &mut [T], it: ComponentIterator<'a, T>) -> ParseResult<()> where T: Copy + ExifValueReader {
+fn collect_slice<'a, T>(slice: &mut [T], mut it: ComponentIterator<'a, T>) -> ParseResult<()> where T: Copy + ExifValueReader {
   for i in 0..slice.len() {
     match it.next() {
       Some(v) => slice[i] = v,
@@ -15,13 +15,49 @@ fn collect_slice<'a, T>(slice: &mut [T], it: ComponentIterator<'a, T>) -> ParseR
   return Ok(())
 }
 
+pub struct GpsPosition {
+  pub latitude: f64,
+  pub longitude: f64
+}
+
+pub struct GpsPositionCombiner<'a> {
+  pub latitude: GpsDegreeCombiner<'a>,
+  pub longitude: GpsDegreeCombiner<'a>
+}
+
+impl<'a> GpsPositionCombiner<'a> {
+  pub fn new() -> GpsPositionCombiner<'a> {
+    GpsPositionCombiner {
+      latitude: GpsDegreeCombiner::new(),
+      longitude: GpsDegreeCombiner::new()
+    }
+  }
+}
+
+impl<'a> TagCombiner<GpsPosition> for GpsPositionCombiner<'a> {
+  fn try_combine_tags(&self) -> Option<ParseResult<GpsPosition>> {
+    if let (Some(latitude), Some(longitude)) = 
+      (self.latitude.try_combine_tags(), self.longitude.try_combine_tags())
+    {
+      match (latitude, longitude) {
+        (Ok(latitude), Ok(longitude)) => Some(Ok(GpsPosition {latitude, longitude})),
+        (Err(err), _) |
+        (_, Err(err)) => Some(Err(err))
+      }
+    }
+    else {
+      None
+    }
+  }
+}
+
 pub struct GpsDegreeCombiner<'a> {
 	pub degrees: Option<RawExifTag<'a>>,
 	pub reference: Option<RawExifTag<'a>>
 }
 
 impl<'a> GpsDegreeCombiner<'a> {
-	pub fn new() -> GpsDegreeCombiner<'a> {
+	fn new() -> GpsDegreeCombiner<'a> {
     GpsDegreeCombiner {
       degrees: None,
       reference: None

@@ -1,6 +1,6 @@
 use tags::{Section, ExifTagIterator};
 use tag::RawExifTag;
-use super::gps_degree::GpsDegreeCombiner;
+use super::gps_degree::GpsPositionCombiner;
 use super::TagCombiner;
 use super::datetime::to_datetime;
 use super::text::to_text;
@@ -12,15 +12,9 @@ fn option_to_tag<'a, T, F>(option: Option<ParseResult<T>>, map: F) -> Option<Par
   option.map(|r| r.map(map))
 }
 
-struct GpsCombiners<'a> {
-  latitude: GpsDegreeCombiner<'a>,
-  longitude: GpsDegreeCombiner<'a>
-}
-
 pub struct TagTransformer<'a> {
-  raw_tag_it: ExifTagIterator<'a>,
   thumbnail: ThumbnailCombiner<'a>,
-  gps: GpsCombiners<'a>,
+  gps_position: GpsPositionCombiner<'a>,
   raw_tags: ExifTagIterator<'a>
 }
 
@@ -43,20 +37,20 @@ impl<'a> TagTransformer<'a> {
         option_to_tag(self.thumbnail.try_combine_tags(), |thumb| Tag::Thumbnail(thumb))
       },
       (GPS, 0x0001) => {
-        self.gps.latitude.reference = Some(raw_tag);
-        option_to_tag(self.gps.latitude.try_combine_tags(), |lat| Tag::GPSLatitude(lat))
+        self.gps_position.latitude.reference = Some(raw_tag);
+        option_to_tag(self.gps_position.try_combine_tags(), |pos| Tag::GpsPosition(pos))
       },
       (GPS, 0x0002) => {
-        self.gps.latitude.degrees = Some(raw_tag);
-        option_to_tag(self.gps.latitude.try_combine_tags(), |lat| Tag::GPSLatitude(lat))
+        self.gps_position.latitude.degrees = Some(raw_tag);
+        option_to_tag(self.gps_position.try_combine_tags(), |pos| Tag::GpsPosition(pos))
       },
       (GPS, 0x0003) => {
-        self.gps.longitude.reference = Some(raw_tag);
-        option_to_tag(self.gps.longitude.try_combine_tags(), |lon| Tag::GPSLongitude(lon))
+        self.gps_position.longitude.reference = Some(raw_tag);
+        option_to_tag(self.gps_position.try_combine_tags(), |pos| Tag::GpsPosition(pos))
       },
       (GPS, 0x0004) => {
-        self.gps.longitude.degrees = Some(raw_tag);
-        option_to_tag(self.gps.longitude.try_combine_tags(), |lon| Tag::GPSLongitude(lon))
+        self.gps_position.longitude.degrees = Some(raw_tag);
+        option_to_tag(self.gps_position.try_combine_tags(), |pos| Tag::GpsPosition(pos))
       },
       (SubIFD, 0x0132) => {
         Some(to_datetime(&raw_tag).map(|dt| Tag::ModifyDate(dt)))
