@@ -50,7 +50,7 @@ impl<'a> Iterator for TagTransformer<'a> {
 
 
 
-pub fn simplify_raw_tag<'a>(raw_tag: RawExifTag<'a>) -> Tag {
+pub fn transform_raw_tag<'a>(raw_tag: RawExifTag<'a>) -> Option<ParseResult<Tag<'a>>> {
 	let simple_tag : Option<ParseResult<Tag<'a>>> = match (section, raw_tag.no) {
 		(Section::IFD1, 0x0201) => {
 			self.thumbnail.offset = Some(raw_tag);
@@ -82,23 +82,23 @@ pub fn simplify_raw_tag<'a>(raw_tag: RawExifTag<'a>) -> Tag {
 		},
 		//Date tags
 		(Section::SubIFD, 0x0132) => {
-			Some(cast_datetime(&raw_tag).map(|dt| Tag::ModifyDate(dt)))
+			Some(to_datetime(&raw_tag).map(|dt| Tag::ModifyDate(dt)))
 		},
 		(Section::SubIFD, 0x9003) => {
-			Some(cast_datetime(&raw_tag).map(|dt| Tag::DateTimeOriginal(dt)))
+			Some(to_datetime(&raw_tag).map(|dt| Tag::DateTimeOriginal(dt)))
 		},
 		(Section::SubIFD, 0x9004) => {
-			Some(cast_datetime(&raw_tag).map(|dt| Tag::CreateDate(dt)))
+			Some(to_datetime(&raw_tag).map(|dt| Tag::CreateDate(dt)))
 		},
 		//Text values
 		(Section::IFD0, 0x010e) => {
-			Some(cast_text(&raw_tag).map(|text| Tag::ImageDescription(text)))
+			Some(to_text(&raw_tag).map(|text| Tag::ImageDescription(text)))
 		},
 		(Section::IFD0, 0x010f) => {
-			Some(cast_text(&raw_tag).map(|text| Tag::Make(text)))
+			Some(to_text(&raw_tag).map(|text| Tag::Make(text)))
 		},
 		(Section::IFD0, 0x0110) => {
-			Some(cast_text(&raw_tag).map(|text| Tag::Model(text)))
+			Some(to_text(&raw_tag).map(|text| Tag::Model(text)))
 		},
 		
 		//Unsupported values

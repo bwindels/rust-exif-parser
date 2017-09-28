@@ -1,25 +1,27 @@
-fn collect_slice<T>(slice: &mut [T], it: ComponentIterator<'a, T>) -> ParseResult<()> {
+use component::ComponentIterator;
+use error::{ParseResult, ParseError};
+use tag::{RawExifTag, ExifVariant};
+use super::TagCombiner;
+use super::text::to_text;
+use component::ExifValueReader;
 
-}
-
-pub impl Result<T, E> {
-  fn tuple_with<S>(&self: Result<T, E>, b: Result<S, E>) -> Result<(T, S), E> {
-    match (self, b) {
-      (Ok(a), Ok(b)) => Ok((a, b)),
-      (Err(err_a), Ok(_)) |
-      (Err(err_a), Err(_)) => Err(err_a),
-      (Ok(_), Err(err_b)) => Err(err_b),
+fn collect_slice<'a, T>(slice: &mut [T], it: ComponentIterator<'a, T>) -> ParseResult<()> where T: Copy + ExifValueReader {
+  for i in 0..slice.len() {
+    match it.next() {
+      Some(v) => slice[i] = v,
+      None => return Err(ParseError::MalformedTag)
     }
   }
+  return Ok(())
 }
 
-pub struct GpsDegreeCombiner {
-	degrees: Option<RawExifTag<'a>>,
-	reference: Option<RawExifTag<'a>>
+pub struct GpsDegreeCombiner<'a> {
+	pub degrees: Option<RawExifTag<'a>>,
+	pub reference: Option<RawExifTag<'a>>
 }
 
-impl GpsDegreeCombiner {
-	pub fn new() {
+impl<'a> GpsDegreeCombiner<'a> {
+	pub fn new() -> GpsDegreeCombiner<'a> {
     GpsDegreeCombiner {
       degrees: None,
       reference: None
@@ -27,29 +29,27 @@ impl GpsDegreeCombiner {
   }
 }
 
-impl TagCombiner<f64> for GpsDegreeCombiner {
-  pub fn try_cast_value(&self) -> Option<ParseResult<f64>> {
-    if let (Some(ref degrees), Some(ref reference)) = (self.degrees, self.reference) {
-      let hour_min_sec = if let Double(ref components) = degrees.value {
-        let degree_values : [f64; 3];
-        collect_slice(&mut degree_values, self.degrees.value).map(|| => degree_values)
+impl<'a> TagCombiner<f64> for GpsDegreeCombiner<'a> {
+  fn try_combine_tags(&self) -> Option<ParseResult<f64>> {
+    if let (&Some(ref degrees), &Some(ref reference)) = (&self.degrees, &self.reference) {
+      let hour_min_sec = if let ExifVariant::Double(ref components) = degrees.value {
+        let mut degree_values = [0f64; 3];
+        collect_slice(&mut degree_values, components.iter()).map(|_| degree_values)
       }
       else {
-        Err(ParseError::Malformed(&self.degrees))
+        Err(ParseError::MalformedTag) //self.degrees
       };
 
-      let sign = if let ExifVariant::Text(ref text) = reference.value {
+      let sign = to_text(&reference).and_then(|text| {
         match text {
-          "N" | "E" => Ok(1),
-          "S" | "W" => Ok(-1),
-          _ => Err(ParseError::Malformed(&self.reference))
+          "N" | "E" => Ok(1f64),
+          "S" | "W" => Ok(-1f64),
+          _ => Err(ParseError::MalformedTag)
         }
-      }
-      else {
-        Err(ParseError::Malformed(&self.reference))
-      }
+      });
 
-      let decimal_degrees = hour_min_sec.tuple_with(sign).map(|(hour_min_sec, sign)| {
+      let hms_and_sign = hour_min_sec.and_then(|hms| sign.map(|s| (hms, s)));
+      let decimal_degrees = hms_and_sign.map(|(hour_min_sec, sign)| {
         (hour_min_sec[0] + (hour_min_sec[1] / 60f64) + (hour_min_sec[2] / 3600f64)) * sign
       });
 

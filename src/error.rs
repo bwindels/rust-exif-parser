@@ -6,7 +6,8 @@ pub enum ParseError {
   InvalidTiffData{ data: u16 },
   UnexpectedEOF,
   ValueOutOfBounds { offset: usize },
-  InvalidJPEGSegmentHeader{ header: u8 }
+  InvalidJPEGSegmentHeader{ header: u8 },
+  MalformedTag
 }
 
 pub type ParseResult<T> = Result<T, ParseError>;

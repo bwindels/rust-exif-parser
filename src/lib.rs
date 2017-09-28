@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod cursor;
 mod error;
 mod jpeg;
@@ -5,7 +7,7 @@ mod component;
 mod tag;
 mod section; 
 mod tags;
-mod value_types;
+mod transform;
 #[cfg(test)]
 mod test_fixtures;
 
